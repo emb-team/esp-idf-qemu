@@ -1,0 +1,9 @@
+menu "Example 'BLE Mesh' Config"
+
+config HCI_5_0_VERSION
+    bool "If you need to send 20ms non-connectable advertising packets and the BLE controller you are using is not HCI 5.0, set this marco to true."
+    default y
+    help
+         It is just a temporary solution, which will be modified later.
+
+endmenu

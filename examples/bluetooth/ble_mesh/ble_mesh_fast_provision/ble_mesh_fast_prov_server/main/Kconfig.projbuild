@@ -1,0 +1,15 @@
+menu "Example 'BLE Mesh' Config"
+
+config ESP_WROOM_32_BOARD
+    bool "If used the ESP32-DevKitC board this macro set to true, if used the ESP-WROVER-KIT board this macro should set to false"
+    default n
+    help
+        this marco only affect the LED pin set with the different board.
+
+config HCI_5_0_VERSION
+    bool "If you need to send 20ms non-connectable advertising packets but BLE controller is not HCI 5.0, this macro set to true."
+    default y
+    help
+         it is a temporal solution, need further modification.
+
+endmenu

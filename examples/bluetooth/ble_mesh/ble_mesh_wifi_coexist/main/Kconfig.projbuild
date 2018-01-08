@@ -1,0 +1,23 @@
+menu "Example 'BLE Mesh' Config"
+
+choice ESP32_BOARD
+    prompt "Board selection for BLE Mesh"
+    default ESP_WROOM_32_BOARD
+    help
+        Select this option to choose the board for BLE Mesh. The default is ESP32-WROOM-32
+
+config ESP_WROOM_32_BOARD
+    bool "ESP32-WROOM-32"
+
+config ESP_WROVER_BOARD
+    bool "ESP32-WROVER"
+
+endchoice
+
+config HCI_5_0_VERSION
+    bool "If you need to send 20ms non-connectable advertising packets and the BLE controller you are using is not HCI 5.0, set this marco to true."
+    default y
+    help
+         It is just a temporary solution, which will be modified later.
+
+endmenu
