@@ -259,7 +259,7 @@ static bool valid_le_scan_param(const struct bt_le_scan_param *param)
     return true;
 }
 
-static int start_le_scan(u8_t scan_type, u16_t interval, u16_t window)
+static int start_le_scan(u8_t scan_type, u16_t interval, u16_t window, u8_t filter_dup)
 {
     int err = 0;
 
@@ -330,13 +330,8 @@ static int start_le_scan(u8_t scan_type, u16_t interval, u16_t window)
 
     /*TODO: Need to process scan_param_setup_cback
      * Need to add menuconfig for duplicate scan*/
-#if defined(CONFIG_BLE_MESH_SCAN_DUPLICATE_EN) && CONFIG_BLE_MESH_SCAN_DUPLICATE_EN
     BTM_BleSetScanFilterParams(client_if, interval, window, scan_type, addr_type_own,
-                               BT_HCI_LE_SCAN_FILTER_DUP_ENABLE, scan_fil_policy, NULL);
-#else
-    BTM_BleSetScanFilterParams(client_if, interval, window, scan_type, addr_type_own,
-                               BT_HCI_LE_SCAN_FILTER_DUP_DISABLE, scan_fil_policy, NULL);
-#endif
+                               filter_dup, scan_fil_policy, NULL);
 
     /*TODO: Need to process p_start_stop_scan_cb to check if start successfully */
     /* BLE Mesh scan permanently, so no duration of scan here */
@@ -725,7 +720,7 @@ int bt_le_scan_start(const struct bt_le_scan_param *param, bt_le_scan_cb_t cb)
     }
 #endif
 
-    err = start_le_scan(param->type, param->interval, param->window);
+    err = start_le_scan(param->type, param->interval, param->window, param->filter_dup);
     if (err) {
 #if BT_DEV
         atomic_clear_bit(bt_dev.flags, BT_DEV_EXPLICIT_SCAN);
@@ -2152,6 +2147,34 @@ int bt_encrypt_be(const u8_t key[16], const u8_t plaintext[16],
     return 0;
 #endif /* CONFIG_MBEDTLS_HARDWARE_AES */
 }
+
+#if defined(CONFIG_BT_MESH_USE_DUPLICATE_SCAN)
+int bt_mesh_update_exceptional_list(u8_t sub_code, u8_t type, void *info)
+{
+    BD_ADDR value = {0};
+
+    if ((sub_code > BT_MESH_EXCEP_LIST_CLEAN) ||
+        (type > BT_MESH_EXCEP_INFO_MESH_PROXY_ADV)) {
+        BT_ERR("%s, Invalid parameter", __func__);
+        return -EINVAL;
+    }
+
+    if (type == BT_MESH_EXCEP_INFO_MESH_LINK_ID) {
+        if (!info) {
+            BT_ERR("%s, NULL Provisioning Link ID", __func__);
+            return -EINVAL;
+        }
+        memcpy(value, info, sizeof(u32_t));
+    }
+
+    BT_DBG("%s, %s type 0x%x", __func__, sub_code ? "Remove" : "Add", type);
+
+    /* The parameter "device_info" can't be NULL in the API */
+    BLE_MESH_BTM_CHECK_STATUS(BTM_UpdateBleDuplicateExceptionalList(sub_code, type, value, NULL));
+
+    return 0;
+}
+#endif
 
 #endif /* #if CONFIG_BT_MESH */
 

@@ -263,6 +263,12 @@ static void reset_link(void)
         prov->link_close(BT_MESH_PROV_ADV);
     }
 
+#if defined(CONFIG_BT_MESH_USE_DUPLICATE_SCAN)
+    /* Remove the link id from exceptional list */
+    bt_mesh_update_exceptional_list(BT_MESH_EXCEP_LIST_REMOVE,
+        BT_MESH_EXCEP_INFO_MESH_LINK_ID, &link.id);
+#endif
+
     /* Clear everything except the retransmit delayed work config */
     memset(&link, 0, offsetof(struct prov_link, tx.retransmit));
 
@@ -1322,6 +1328,12 @@ static void link_open(struct prov_rx *rx, struct net_buf_simple *buf)
     link.id = rx->link_id;
     atomic_set_bit(link.flags, LINK_ACTIVE);
     net_buf_simple_init(link.rx.buf, 0);
+
+#if defined(CONFIG_BT_MESH_USE_DUPLICATE_SCAN)
+    /* Add the link id into exceptional list */
+    bt_mesh_update_exceptional_list(BT_MESH_EXCEP_LIST_ADD,
+        BT_MESH_EXCEP_INFO_MESH_LINK_ID, &link.id);
+#endif
 
     bearer_ctl_send(LINK_ACK, NULL, 0);
 

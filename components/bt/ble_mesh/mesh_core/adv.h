@@ -76,6 +76,8 @@ void bt_mesh_adv_init(void);
 
 int bt_mesh_scan_enable(void);
 
+int bt_mesh_duplicate_scan_enable(void);
+
 int bt_mesh_scan_disable(void);
 
 void ble_mesh_task_post(ble_mesh_msg_t *msg, uint32_t timeout);

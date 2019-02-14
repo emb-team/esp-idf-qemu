@@ -832,5 +832,30 @@ int bt_encrypt_le(const u8_t key[16], const u8_t plaintext[16],
 int bt_encrypt_be(const u8_t key[16], const u8_t plaintext[16],
                   u8_t enc_data[16]);
 
+enum {
+    BT_MESH_EXCEP_LIST_ADD = 0,
+    BT_MESH_EXCEP_LIST_REMOVE,
+    BT_MESH_EXCEP_LIST_CLEAN,
+};
+
+enum {
+    BT_MESH_EXCEP_INFO_ADV_ADDR = 0,
+    BT_MESH_EXCEP_INFO_MESH_LINK_ID,
+    BT_MESH_EXCEP_INFO_MESH_BEACON,
+    BT_MESH_EXCEP_INFO_MESH_PROV_ADV,
+    BT_MESH_EXCEP_INFO_MESH_PROXY_ADV,
+};
+
+enum {
+    BT_MESH_EXCEP_CLEAN_ADDR_LIST           = BIT(0),
+    BT_MESH_EXCEP_CLEAN_MESH_LINK_ID_LIST   = BIT(1),
+    BT_MESH_EXCEP_CLEAN_MESH_BEACON_LIST    = BIT(2),
+    BT_MESH_EXCEP_CLEAN_MESH_PROV_ADV_LIST  = BIT(3),
+    BT_MESH_EXCEP_CLEAN_MESH_PROXY_ADV_LIST = BIT(4),
+    BT_MESH_EXCEP_CLEAN_ALL_LIST            = 0xFFFF,
+};
+
+int bt_mesh_update_exceptional_list(u8_t sub_code, u8_t type, void *info);
+
 #endif /* #ifndef __MESH_BEARER_ADRPT_H__ */
 

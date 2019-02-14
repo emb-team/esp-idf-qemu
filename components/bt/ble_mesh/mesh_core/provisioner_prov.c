@@ -1077,6 +1077,12 @@ static void reset_link(int i, u8_t reason)
 
     prov_memory_free(i);
 
+#if defined(CONFIG_BT_MESH_USE_DUPLICATE_SCAN)
+    /* Remove the link id from exceptional list */
+    bt_mesh_update_exceptional_list(BT_MESH_EXCEP_LIST_REMOVE,
+        BT_MESH_EXCEP_INFO_MESH_LINK_ID, &link[i].link_id);
+#endif
+
     /* Clear everything except the retransmit delayed work config */
     memset(&link[i], 0, offsetof(struct prov_link, tx.retransmit));
 
@@ -1230,6 +1236,12 @@ static void send_link_open(void)
             break;
         }
     }
+
+#if defined(CONFIG_BT_MESH_USE_DUPLICATE_SCAN)
+    /* Add the link id into exceptional list */
+    bt_mesh_update_exceptional_list(BT_MESH_EXCEP_LIST_ADD,
+        BT_MESH_EXCEP_INFO_MESH_LINK_ID, &link[i].link_id);
+#endif
 
     bearer_ctl_send(i, LINK_OPEN, link[i].uuid, 16);
 

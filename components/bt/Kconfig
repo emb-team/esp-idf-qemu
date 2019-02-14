@@ -1290,6 +1290,19 @@ menuconfig BT_MESH
 
 if BT_MESH
 
+comment "Note: If using Duplicate Scan, set Scan Duplicate Type to 0x2"
+config BT_MESH_USE_DUPLICATE_SCAN
+    bool "Support Duplicate Scan in BLE Mesh"
+    select BLE_SCAN_DUPLICATE
+    select BLE_MESH_SCAN_DUPLICATE_EN
+    default y
+    help
+        Enable this option to allow using specific duplicate scan filter
+        in BLE Mesh, Scan Duplicate Type must be set to 0x02.
+        make menuconfig -> Component config -> Bluetooth -> Bluetooth
+        controller -> Scan Duplicate Type -> Scan Duplicate By Device
+        Address And Advertising Data.
+
 config BT_MESH_FAST_PROV
     bool "Enable BLE Mesh Fast Provisioning"
     select BT_MESH_NODE

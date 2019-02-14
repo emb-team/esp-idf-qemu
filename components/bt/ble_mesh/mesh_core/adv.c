@@ -421,6 +421,22 @@ int bt_mesh_scan_enable(void)
     return bt_le_scan_start(&scan_param, bt_mesh_scan_cb);
 }
 
+#if defined(CONFIG_BT_MESH_USE_DUPLICATE_SCAN)
+int bt_mesh_duplicate_scan_enable(void)
+{
+    struct bt_le_scan_param scan_param = {
+        .type       = BT_HCI_LE_SCAN_PASSIVE,
+        .filter_dup = BT_HCI_LE_SCAN_FILTER_DUP_ENABLE,
+        .interval   = MESH_SCAN_INTERVAL,
+        .window     = MESH_SCAN_WINDOW
+    };
+
+    BT_DBG("%s", __func__);
+
+    return bt_le_scan_start(&scan_param, bt_mesh_scan_cb);
+}
+#endif
+
 int bt_mesh_scan_disable(void)
 {
     BT_DBG("%s", __func__);

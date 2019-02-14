@@ -1478,10 +1478,21 @@ void bt_mesh_net_start(void)
         bt_mesh_adv_update();
     }
 
+#if defined(CONFIG_BT_MESH_USE_DUPLICATE_SCAN)
+    /* Add Mesh beacon type (Secure Network Beacon) to the exceptional list */
+    bt_mesh_update_exceptional_list(BT_MESH_EXCEP_LIST_ADD,
+        BT_MESH_EXCEP_INFO_MESH_BEACON, NULL);
+#endif
+
     if (IS_ENABLED(CONFIG_BT_MESH_LOW_POWER)) {
+        /* TODO: Enable duplicate scan in Low Power Mode */
         bt_mesh_lpn_init();
     } else {
+#if defined(CONFIG_BT_MESH_USE_DUPLICATE_SCAN)
+        bt_mesh_duplicate_scan_enable();
+#else
         bt_mesh_scan_enable();
+#endif
     }
 
     if (IS_ENABLED(CONFIG_BT_MESH_FRIEND)) {

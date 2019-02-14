@@ -97,10 +97,21 @@ int bt_mesh_provision(const u8_t net_key[16], u16_t net_idx,
     /* Add this to avoid "already active status" for bt_mesh_scan_enable() */
     bt_mesh_scan_disable();
 
+#if defined(CONFIG_BT_MESH_USE_DUPLICATE_SCAN)
+    /* Add Mesh beacon type (Secure Network Beacon) to the exceptional list */
+    bt_mesh_update_exceptional_list(BT_MESH_EXCEP_LIST_ADD,
+        BT_MESH_EXCEP_INFO_MESH_BEACON, NULL);
+#endif
+
     if (IS_ENABLED(CONFIG_BT_MESH_LOW_POWER)) {
+        /* TODO: Enable duplicate scan in Low Power Mode */
         bt_mesh_lpn_init();
     } else {
+#if defined(CONFIG_BT_MESH_USE_DUPLICATE_SCAN)
+        bt_mesh_duplicate_scan_enable();
+#else
         bt_mesh_scan_enable();
+#endif
     }
 
     if (IS_ENABLED(CONFIG_BT_MESH_FRIEND)) {
@@ -181,7 +192,11 @@ int bt_mesh_prov_enable(bt_mesh_prov_bearer_t bearers)
     if (IS_ENABLED(CONFIG_BT_MESH_PB_ADV) &&
             (bearers & BT_MESH_PROV_ADV)) {
         /* Make sure the scanning is for provisioning invitations */
+#if defined(CONFIG_BT_MESH_USE_DUPLICATE_SCAN)
+        bt_mesh_duplicate_scan_enable();
+#else
         bt_mesh_scan_enable();
+#endif
         /* Enable unprovisioned beacon sending */
         bt_mesh_beacon_enable();
     }
@@ -242,11 +257,34 @@ int bt_mesh_provisioner_enable(bt_mesh_prov_bearer_t bearers)
         return err;
     }
 
+#if defined(CONFIG_BT_MESH_USE_DUPLICATE_SCAN)
+    if (IS_ENABLED(CONFIG_BT_MESH_PB_ADV) &&
+            (bearers & BT_MESH_PROV_ADV)) {
+        bt_mesh_update_exceptional_list(BT_MESH_EXCEP_LIST_ADD,
+            BT_MESH_EXCEP_INFO_MESH_BEACON, NULL);
+    }
+
+    if (IS_ENABLED(CONFIG_BT_MESH_PB_GATT) &&
+            (bearers & BT_MESH_PROV_GATT)) {
+        bt_mesh_update_exceptional_list(BT_MESH_EXCEP_LIST_ADD,
+            BT_MESH_EXCEP_INFO_MESH_PROV_ADV, NULL);
+    }
+
+    if (IS_ENABLED(CONFIG_BT_MESH_PROXY)) {
+        bt_mesh_update_exceptional_list(BT_MESH_EXCEP_LIST_ADD,
+            BT_MESH_EXCEP_INFO_MESH_PROXY_ADV, NULL);
+    }
+#endif
+
     if ((IS_ENABLED(CONFIG_BT_MESH_PB_ADV) &&
             (bearers & BT_MESH_PROV_ADV)) ||
             (IS_ENABLED(CONFIG_BT_MESH_PB_GATT) &&
              (bearers & BT_MESH_PROV_GATT))) {
+#if defined(CONFIG_BT_MESH_USE_DUPLICATE_SCAN)
+        bt_mesh_duplicate_scan_enable();
+#else
         bt_mesh_scan_enable();
+#endif
     }
 
     if (IS_ENABLED(CONFIG_BT_MESH_PB_GATT) &&
