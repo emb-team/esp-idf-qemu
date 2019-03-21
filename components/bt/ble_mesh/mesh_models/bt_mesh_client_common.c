@@ -189,12 +189,13 @@ int bt_mesh_client_send_msg(struct bt_mesh_model *model,
     }
 
     if (bt_mesh_client_check_node_in_list(&internal->queue, ctx->addr)) {
+        BT_ERR("%s, Busy sending message to DST 0x%04x", __func__, ctx->addr);
         err = -EBUSY;
     } else {
         /* Don't forget to free the node in the timeout (timer_handler) function. */
         node = (bt_mesh_client_node_t *)osi_calloc(sizeof(bt_mesh_client_node_t));
         if (!node) {
-            BT_ERR("%s: allocate memory fail", __func__);
+            BT_ERR("%s: Failed to allocate memory", __func__);
             return -ENOMEM;
         }
         memcpy(&node->ctx, ctx, sizeof(struct bt_mesh_msg_ctx));

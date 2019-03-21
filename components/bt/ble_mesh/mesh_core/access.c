@@ -307,6 +307,10 @@ static void mod_publish(struct k_work *work)
 
     pub->period_start = k_uptime_get_32();
 
+    /* Callback the model publish update event to the application layer.
+     * In the event, users can update the context of the publish message
+     * which will be published in the next period.
+     */
     err = pub->update(pub->mod);
     if (err) {
         BT_ERR("Failed to update publication message");
@@ -598,8 +602,7 @@ bool bt_mesh_fixed_group_match(u16_t addr)
     case BT_MESH_ADDR_ALL_NODES:
         return true;
     case BT_MESH_ADDR_PROXIES:
-        /* TODO: Proxy not yet supported */
-        return false;
+        return (bt_mesh_gatt_proxy_get() == BT_MESH_GATT_PROXY_ENABLED);
     case BT_MESH_ADDR_FRIENDS:
         return (bt_mesh_friend_get() == BT_MESH_FRIEND_ENABLED);
     case BT_MESH_ADDR_RELAYS:
