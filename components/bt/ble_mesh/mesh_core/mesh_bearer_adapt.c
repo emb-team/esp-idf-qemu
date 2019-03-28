@@ -816,13 +816,12 @@ static void bt_mesh_bta_gatts_cb(tBTA_GATTS_EVT event, tBTA_GATTS *p_data)
         }
         break;
     }
-    case BTA_GATTS_ADD_INCL_SRVC_EVT: {
+    case BTA_GATTS_ADD_INCL_SRVC_EVT:
         svc_handle = p_data->add_result.attr_id;
         if (future_mesh != NULL) {
             future_ready(future_mesh, FUTURE_SUCCESS);
         }
         break;
-    }
     case BTA_GATTS_ADD_CHAR_EVT:
         char_handle = p_data->add_result.attr_id;
         if (future_mesh != NULL) {
@@ -841,7 +840,7 @@ static void bt_mesh_bta_gatts_cb(tBTA_GATTS_EVT event, tBTA_GATTS *p_data)
         break;
     case BTA_GATTS_STOP_EVT:
         break;
-    case BTA_GATTS_CONNECT_EVT: {
+    case BTA_GATTS_CONNECT_EVT:
         /*Adv disabled*/
         // atomic_clear_bit(bt_dev.flags, BT_DEV_ADVERTISING);
         if (bt_mesh_gatts_conn_cb != NULL && bt_mesh_gatts_conn_cb->connected != NULL) {
@@ -850,10 +849,11 @@ static void bt_mesh_bta_gatts_cb(tBTA_GATTS_EVT event, tBTA_GATTS *p_data)
                 bt_mesh_gatts_conn[index].handle = BT_MESH_GATT_GET_CONN_ID(p_data->conn.conn_id);
                 (bt_mesh_gatts_conn_cb->connected)(&bt_mesh_gatts_conn[index], 0);
             }
+            /* Send GATT service change indication */
+            BTA_GATTS_SendServiceChangeIndication(p_data->conn.server_if, p_data->conn.remote_bda);
         }
         break;
-    }
-    case BTA_GATTS_DISCONNECT_EVT: {
+    case BTA_GATTS_DISCONNECT_EVT:
         /*Adv disabled*/
         // atomic_clear_bit(bt_dev.flags, BT_DEV_ADVERTISING);
         if (bt_mesh_gatts_conn_cb != NULL && bt_mesh_gatts_conn_cb->disconnected != NULL) {
@@ -864,7 +864,6 @@ static void bt_mesh_bta_gatts_cb(tBTA_GATTS_EVT event, tBTA_GATTS *p_data)
             }
         }
         break;
-    }
     case BTA_GATTS_CLOSE_EVT:
         break;
     default:
