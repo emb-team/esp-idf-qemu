@@ -4,6 +4,7 @@
 
 * [Provisioning of BLE Mesh nodes using Smartphone App](http://download.espressif.com/BLE_MESH/Docs4Customers/esp-ble-mesh-demo.mp4)
 * [Espressif Fast Provisioning using ESP BLE Mesh App](http://download.espressif.com/BLE_MESH/BLE_Mesh_Demo/V0.4_Demo_Fast_Provision/ESP32_BLE_Mesh_Fast_Provision.mp4)
+* [Espressif BLE Mesh and Wi-Fi Coexistence](http://download.espressif.com/BLE_MESH/BLE_Mesh_Demo/V0.5_Demo_Coexistence/ESP_BLE_MESH_%26_WIFI_Coexistence.mp4)
 
 ## Examples
 
@@ -12,7 +13,14 @@
 * [BLE Mesh Provisioner Example Code](../../../../examples/bluetooth/ble_mesh/ble_mesh_provisioner)
 * [BLE_Mesh_Provisioner_Example_Walkthrough](../../../../examples/bluetooth/ble_mesh/ble_mesh_provisioner/tutorial/Ble_Mesh_Provisioner_Example_Walkthrough.md)
 * [BLE Mesh Client Model Example Code](../../../../examples/bluetooth/ble_mesh/ble_mesh_client_model)
-
+* [BLE_Mesh_Client_Model_Example_Walkthrough](../../../../examples/bluetooth/ble_mesh/ble_mesh_client_model/tutorial/ble_mesh_client_model.md)
+* [BLE Mesh Console Example Code](../../../../examples/bluetooth/ble_mesh/ble_mesh_console)
+* [BLE Mesh Fast Prov Client Example Code](../../../../examples/bluetooth/ble_mesh/ble_mesh_fast_provision/ble_mesh_fast_prov_client)
+* [BLE_Mesh_Fast_Prov_Client_Example_Walkthrough](../../../../examples/bluetooth/ble_mesh/ble_mesh_fast_provision/ble_mesh_fast_prov_client/tutorial/ble_mesh_fast_provision_client.md)
+* [BLE Mesh Fast Prov Server Example Code](../../../../examples/bluetooth/ble_mesh/ble_mesh_fast_provision/ble_mesh_fast_prov_server)
+* [BLE_Mesh_Fast_Prov_Server_Example_Walkthrough](../../../../examples/bluetooth/ble_mesh/ble_mesh_fast_provision/ble_mesh_fast_prov_server/tutorial/ble_mesh_fast_provision_server.md)
+* [BLE Mesh Wifi Coexist Example Code](../../../../examples/bluetooth/ble_mesh/ble_mesh_wifi_coexist)
+* [BLE_Mesh_Wifi_Coexist_Example_Walkthrough](../../../../examples/bluetooth/ble_mesh/ble_mesh_wifi_coexist/tutorial%20%20%20%20%20%20/ble_mesh_wifi_coexist.md)
 ## Documentation
 
 ### ESP BLE Mesh Development Documentation

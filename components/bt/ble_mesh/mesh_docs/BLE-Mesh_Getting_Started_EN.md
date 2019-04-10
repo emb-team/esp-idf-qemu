@@ -72,19 +72,31 @@ $ tree examples/bluetooth/ble_mesh/
 │   ├── sdkconfig.defaults
 │   └── tutorial
 │       └── Ble_Mesh_Node_Example_Walkthrough.md
-└── ble_mesh_provisioner
+├── ble_mesh_provisioner
+│   ├── main
+│   │   ├── ble_mesh_demo_main.c
+│   │   ├── board.c
+│   │   ├── board.h
+│   │   ├── component.mk
+│   │   └── Kconfig.projbuild
+│   ├── Makefile
+│   ├── README.md
+│   ├── sdkconfig.defaults
+│   └── tutorial
+│       └── Ble_Mesh_Provisioner_Example_Walkthrough.md
+├──ble_mesh_console
+│   ├── ble_mesh_node
+│   └── ble_mesh_provisioner
+├──ble_mesh_fast_provision
+│   ├── ble_mesh_fast_prov_client
+│   └── ble_mesh_fast_prov_server
+├──ble_mesh_vendor_models
+│   ├── fast_prov_vendor_model
+└──ble_mesh_wifi_coexist
     ├── main
-    │   ├── ble_mesh_demo_main.c
-    │   ├── board.c
-    │   ├── board.h
-    │   ├── component.mk
-    │   └── Kconfig.projbuild
-    ├── Makefile
-    ├── README.md
-    ├── sdkconfig.defaults
+    ├── components
     └── tutorial
-        └── Ble_Mesh_Provisioner_Example_Walkthrough.md
-
+        └── ble_mesh_wifi_coexist.md
 8 directories, 26 files
 ```
 
@@ -115,7 +127,7 @@ This example shows how a device can act as a BLE Mesh provisioner to provision d
 
 ## Mobile Apps
 
-ESP BLE Mesh implementation is compatible with a few phone apps, including Silicon Labs BLE Mesh and nRF Mesh. These apps are available on Google Play and App Store. In addition, Espressif offers its own Android app which is currently being actively developed. You can find the latest APK file [here](http://download.espressif.com/BLE_MESH/BLE_Mesh_Tools/BLE_Mesh_App/EspBleMesh-v0.9.2).
+ESP BLE Mesh implementation is compatible with a few phone apps, including Silicon Labs BLE Mesh and nRF Mesh. These apps are available on Google Play and App Store. In addition, Espressif offers its own Android app which is currently being actively developed. You can find the latest APK file [here](http://download.espressif.com/BLE_MESH/BLE_Mesh_Tools/BLE_Mesh_App/EspBleMesh-0.9.4.apk).
 
 Note: The most recent tested version 1.1.0 of Silicon Labs App has a bug, which has been fixed by a workaround on the SDK side. The fix is implemented through a configuration option enabled by default. For other Android/iOS apps, this option needs to be disabled from menuconfig:
 `make menuconfig -> Example Configuration -> This option fixes the bug of Silicon Lab Android App 1.1.0 when reconnection will cause the sequence number to recount from 0`
