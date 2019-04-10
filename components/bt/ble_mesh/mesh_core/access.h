@@ -13,13 +13,11 @@
 #include "mesh_buf.h"
 #include "net.h"
 
-#if CONFIG_BT_MESH
-
 /* bt_mesh_model.flags */
 enum {
-    BT_MESH_MOD_BIND_PENDING = BIT(0),
-    BT_MESH_MOD_SUB_PENDING = BIT(1),
-    BT_MESH_MOD_PUB_PENDING = BIT(2),
+    BLE_MESH_MOD_BIND_PENDING = BIT(0),
+    BLE_MESH_MOD_SUB_PENDING = BIT(1),
+    BLE_MESH_MOD_PUB_PENDING = BIT(2),
 };
 
 void bt_mesh_elem_register(struct bt_mesh_elem *elem, u8_t count);
@@ -58,5 +56,5 @@ const struct bt_mesh_comp *bt_mesh_comp_get(void);
 void bt_mesh_model_recv(struct bt_mesh_net_rx *rx, struct net_buf_simple *buf);
 
 int bt_mesh_comp_register(const struct bt_mesh_comp *comp);
-#endif /* #if CONFIG_BT_MESH */
-#endif /* #ifndef _ACCESS_H_ */
+
+#endif /* _ACCESS_H_ */

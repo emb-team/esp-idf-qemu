@@ -16,13 +16,13 @@
 
 uint8_t dev_uuid[16] = {0xdd, 0xdd};
 
-#if CONFIG_BT_MESH_NODE
+#if CONFIG_BLE_MESH_NODE
 esp_ble_mesh_prov_t prov = {
     .uuid = dev_uuid,
 };
-#endif //CONFIG_BT_MESH_NODE
+#endif //CONFIG_BLE_MESH_NODE
 
-#if CONFIG_BT_MESH_PROVISIONER
+#if CONFIG_BLE_MESH_PROVISIONER
 esp_ble_mesh_prov_t prov = {
     .prov_uuid           = dev_uuid,
     .prov_unicast_addr   = 0x0001,
@@ -35,7 +35,7 @@ esp_ble_mesh_prov_t prov = {
     .flags               = 0x00,
     .iv_index            = 0x00,
 };
-#endif //CONFIG_BT_MESH_PROVISIONER
+#endif //CONFIG_BLE_MESH_PROVISIONER
 
 esp_ble_mesh_model_pub_t model_pub_config = {
     .msg = NET_BUF_SIMPLE(2 + 1),
@@ -48,21 +48,21 @@ esp_ble_mesh_model_pub_t vendor_model_pub_config;
 esp_ble_mesh_cfg_srv_t cfg_srv = {
     .relay = ESP_BLE_MESH_RELAY_ENABLED,
     .beacon = ESP_BLE_MESH_BEACON_ENABLED,
-#if defined(CONFIG_BT_MESH_FRIEND)
-    .friend_state = BT_MESH_FRIEND_ENABLED,
+#if defined(CONFIG_BLE_MESH_FRIEND)
+    .friend_state = ESP_BLE_MESH_FRIEND_ENABLED,
 #else
-    .friend_state = BT_MESH_FRIEND_NOT_SUPPORTED,
+    .friend_state = ESP_BLE_MESH_FRIEND_NOT_SUPPORTED,
 #endif
-#if defined(CONFIG_BT_MESH_GATT_PROXY)
-    .gatt_proxy = BT_MESH_GATT_PROXY_ENABLED,
+#if defined(CONFIG_BLE_MESH_GATT_PROXY)
+    .gatt_proxy = ESP_BLE_MESH_GATT_PROXY_ENABLED,
 #else
-    .gatt_proxy = BT_MESH_GATT_PROXY_NOT_SUPPORTED,
+    .gatt_proxy = ESP_BLE_MESH_GATT_PROXY_NOT_SUPPORTED,
 #endif
     .default_ttl = 7,
 
     /* 3 transmissions with 20ms interval */
     .net_transmit = ESP_BLE_MESH_TRANSMIT(2, 20),
-    .relay_retransmit = BT_MESH_TRANSMIT(0, 20),
+    .relay_retransmit = ESP_BLE_MESH_TRANSMIT(0, 20),
 };
 
 esp_ble_mesh_model_t config_server_models[] = {
@@ -119,7 +119,7 @@ esp_ble_mesh_comp_t gen_onoff_srv_comp = {
 };
 
 // config generic onoff client
-#if (CONFIG_BT_MESH_GENERIC_ONOFF_CLI)
+#if (CONFIG_BLE_MESH_GENERIC_ONOFF_CLI)
 
 esp_ble_mesh_client_t gen_onoff_cli;
 
@@ -138,7 +138,7 @@ esp_ble_mesh_comp_t gen_onoff_cli_comp = {
     .elements = gen_onoff_cli_elements,
     .element_count = ARRAY_SIZE(gen_onoff_cli_elements),
 };
-#endif //CONFIG_BT_MESH_GENERIC_ONOFF_CLI
+#endif //CONFIG_BLE_MESH_GENERIC_ONOFF_CLI
 
 //CONFIG VENDOR MODEL TEST PERFORMANCE
 #define ESP_BLE_MESH_VND_MODEL_ID_TEST_PERF_SRV 0x2000

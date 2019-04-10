@@ -6,10 +6,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+#ifndef _FRIEND_H_
+#define _FRIEND_H_
+
 enum bt_mesh_friend_pdu_type {
-    BT_MESH_FRIEND_PDU_SINGLE,
-    BT_MESH_FRIEND_PDU_PARTIAL,
-    BT_MESH_FRIEND_PDU_COMPLETE,
+    BLE_MESH_FRIEND_PDU_SINGLE,
+    BLE_MESH_FRIEND_PDU_PARTIAL,
+    BLE_MESH_FRIEND_PDU_COMPLETE,
 };
 
 bool bt_mesh_friend_match(u16_t net_idx, u16_t addr);
@@ -32,13 +35,20 @@ void bt_mesh_friend_sec_update(u16_t net_idx);
 void bt_mesh_friend_clear_net_idx(u16_t net_idx);
 
 int bt_mesh_friend_poll(struct bt_mesh_net_rx *rx, struct net_buf_simple *buf);
+
 int bt_mesh_friend_req(struct bt_mesh_net_rx *rx, struct net_buf_simple *buf);
+
 int bt_mesh_friend_clear(struct bt_mesh_net_rx *rx, struct net_buf_simple *buf);
+
 int bt_mesh_friend_clear_cfm(struct bt_mesh_net_rx *rx,
                              struct net_buf_simple *buf);
+
 int bt_mesh_friend_sub_add(struct bt_mesh_net_rx *rx,
                            struct net_buf_simple *buf);
+
 int bt_mesh_friend_sub_rem(struct bt_mesh_net_rx *rx,
                            struct net_buf_simple *buf);
 
 int bt_mesh_friend_init(void);
+
+#endif /* _FRIEND_H_ */

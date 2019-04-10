@@ -23,7 +23,7 @@
 #include "ble_mesh_adapter.h"
 #include "ble_mesh_console_decl.h"
 
-#if CONFIG_BT_MESH_PROVISIONER
+#if CONFIG_BLE_MESH_PROVISIONER
 
 typedef struct {
     struct arg_int *bearer;

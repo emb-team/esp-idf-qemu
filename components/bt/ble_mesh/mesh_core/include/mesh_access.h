@@ -8,15 +8,14 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
+#ifndef _BLE_MESH_ACCESS_H_
+#define _BLE_MESH_ACCESS_H_
 
 #include <stddef.h>
 #include "mesh_types.h"
 #include "mesh_util.h"
 #include "mesh_buf.h"
 #include "sdkconfig.h"
-#if CONFIG_BT_MESH
-#ifndef __BT_MESH_ACCESS_H
-#define __BT_MESH_ACCESS_H
 
 /**
  * @brief Bluetooth Mesh Access Layer
@@ -25,26 +24,26 @@
  * @{
  */
 
-#define BT_MESH_ADDR_UNASSIGNED   0x0000
-#define BT_MESH_ADDR_ALL_NODES    0xffff
-#define BT_MESH_ADDR_PROXIES      0xfffc
-#define BT_MESH_ADDR_FRIENDS      0xfffd
-#define BT_MESH_ADDR_RELAYS       0xfffe
+#define BLE_MESH_ADDR_UNASSIGNED   0x0000
+#define BLE_MESH_ADDR_ALL_NODES    0xffff
+#define BLE_MESH_ADDR_PROXIES      0xfffc
+#define BLE_MESH_ADDR_FRIENDS      0xfffd
+#define BLE_MESH_ADDR_RELAYS       0xfffe
 
-#define BT_MESH_KEY_UNUSED        0xffff
-#define BT_MESH_KEY_DEV           0xfffe
+#define BLE_MESH_KEY_UNUSED        0xffff
+#define BLE_MESH_KEY_DEV           0xfffe
 
 /** Helper to define a mesh element within an array.
  *
  *  In case the element has no SIG or Vendor models the helper
- *  macro BT_MESH_MODEL_NONE can be given instead.
+ *  macro BLE_MESH_MODEL_NONE can be given instead.
  *
  *  @param _loc       Location Descriptor.
  *  @param _mods      Array of models.
  *  @param _vnd_mods  Array of vendor models.
  */
-#define BT_MESH_ELEM(_loc, _mods, _vnd_mods)        \
-{                                                   \
+#define BLE_MESH_ELEM(_loc, _mods, _vnd_mods)   \
+{                                               \
     .loc              = (_loc),                 \
     .model_count      = ARRAY_SIZE(_mods),      \
     .models           = (_mods),                \
@@ -68,64 +67,64 @@ struct bt_mesh_elem {
 };
 
 /* Foundation Models */
-#define BT_MESH_MODEL_ID_CFG_SRV                   0x0000
-#define BT_MESH_MODEL_ID_CFG_CLI                   0x0001
-#define BT_MESH_MODEL_ID_HEALTH_SRV                0x0002
-#define BT_MESH_MODEL_ID_HEALTH_CLI                0x0003
+#define BLE_MESH_MODEL_ID_CFG_SRV                   0x0000
+#define BLE_MESH_MODEL_ID_CFG_CLI                   0x0001
+#define BLE_MESH_MODEL_ID_HEALTH_SRV                0x0002
+#define BLE_MESH_MODEL_ID_HEALTH_CLI                0x0003
 
 /* Models from the Mesh Model Specification */
-#define BT_MESH_MODEL_ID_GEN_ONOFF_SRV             0x1000
-#define BT_MESH_MODEL_ID_GEN_ONOFF_CLI             0x1001
-#define BT_MESH_MODEL_ID_GEN_LEVEL_SRV             0x1002
-#define BT_MESH_MODEL_ID_GEN_LEVEL_CLI             0x1003
-#define BT_MESH_MODEL_ID_GEN_DEF_TRANS_TIME_SRV    0x1004
-#define BT_MESH_MODEL_ID_GEN_DEF_TRANS_TIME_CLI    0x1005
-#define BT_MESH_MODEL_ID_GEN_POWER_ONOFF_SRV       0x1006
-#define BT_MESH_MODEL_ID_GEN_POWER_ONOFF_SETUP_SRV 0x1007
-#define BT_MESH_MODEL_ID_GEN_POWER_ONOFF_CLI       0x1008
-#define BT_MESH_MODEL_ID_GEN_POWER_LEVEL_SRV       0x1009
-#define BT_MESH_MODEL_ID_GEN_POWER_LEVEL_SETUP_SRV 0x100a
-#define BT_MESH_MODEL_ID_GEN_POWER_LEVEL_CLI       0x100b
-#define BT_MESH_MODEL_ID_GEN_BATTERY_SRV           0x100c
-#define BT_MESH_MODEL_ID_GEN_BATTERY_CLI           0x100d
-#define BT_MESH_MODEL_ID_GEN_LOCATION_SRV          0x100e
-#define BT_MESH_MODEL_ID_GEN_LOCATION_SETUPSRV     0x100f
-#define BT_MESH_MODEL_ID_GEN_LOCATION_CLI          0x1010
-#define BT_MESH_MODEL_ID_GEN_ADMIN_PROP_SRV        0x1011
-#define BT_MESH_MODEL_ID_GEN_MANUFACTURER_PROP_SRV 0x1012
-#define BT_MESH_MODEL_ID_GEN_USER_PROP_SRV         0x1013
-#define BT_MESH_MODEL_ID_GEN_CLIENT_PROP_SRV       0x1014
-#define BT_MESH_MODEL_ID_GEN_PROP_CLI              0x1015
-#define BT_MESH_MODEL_ID_SENSOR_SRV                0x1100
-#define BT_MESH_MODEL_ID_SENSOR_SETUP_SRV          0x1101
-#define BT_MESH_MODEL_ID_SENSOR_CLI                0x1102
-#define BT_MESH_MODEL_ID_TIME_SRV                  0x1200
-#define BT_MESH_MODEL_ID_TIME_SETUP_SRV            0x1201
-#define BT_MESH_MODEL_ID_TIME_CLI                  0x1202
-#define BT_MESH_MODEL_ID_SCENE_SRV                 0x1203
-#define BT_MESH_MODEL_ID_SCENE_SETUP_SRV           0x1204
-#define BT_MESH_MODEL_ID_SCENE_CLI                 0x1205
-#define BT_MESH_MODEL_ID_SCHEDULER_SRV             0x1206
-#define BT_MESH_MODEL_ID_SCHEDULER_SETUP_SRV       0x1207
-#define BT_MESH_MODEL_ID_SCHEDULER_CLI             0x1208
-#define BT_MESH_MODEL_ID_LIGHT_LIGHTNESS_SRV       0x1300
-#define BT_MESH_MODEL_ID_LIGHT_LIGHTNESS_SETUP_SRV 0x1301
-#define BT_MESH_MODEL_ID_LIGHT_LIGHTNESS_CLI       0x1302
-#define BT_MESH_MODEL_ID_LIGHT_CTL_SRV             0x1303
-#define BT_MESH_MODEL_ID_LIGHT_CTL_SETUP_SRV       0x1304
-#define BT_MESH_MODEL_ID_LIGHT_CTL_CLI             0x1305
-#define BT_MESH_MODEL_ID_LIGHT_CTL_TEMP_SRV        0x1306
-#define BT_MESH_MODEL_ID_LIGHT_HSL_SRV             0x1307
-#define BT_MESH_MODEL_ID_LIGHT_HSL_SETUP_SRV       0x1308
-#define BT_MESH_MODEL_ID_LIGHT_HSL_CLI             0x1309
-#define BT_MESH_MODEL_ID_LIGHT_HSL_HUE_SRV         0x130a
-#define BT_MESH_MODEL_ID_LIGHT_HSL_SAT_SRV         0x130b
-#define BT_MESH_MODEL_ID_LIGHT_XYL_SRV             0x130c
-#define BT_MESH_MODEL_ID_LIGHT_XYL_SETUP_SRV       0x130d
-#define BT_MESH_MODEL_ID_LIGHT_XYL_CLI             0x130e
-#define BT_MESH_MODEL_ID_LIGHT_LC_SRV              0x130f
-#define BT_MESH_MODEL_ID_LIGHT_LC_SETUPSRV         0x1310
-#define BT_MESH_MODEL_ID_LIGHT_LC_CLI              0x1311
+#define BLE_MESH_MODEL_ID_GEN_ONOFF_SRV             0x1000
+#define BLE_MESH_MODEL_ID_GEN_ONOFF_CLI             0x1001
+#define BLE_MESH_MODEL_ID_GEN_LEVEL_SRV             0x1002
+#define BLE_MESH_MODEL_ID_GEN_LEVEL_CLI             0x1003
+#define BLE_MESH_MODEL_ID_GEN_DEF_TRANS_TIME_SRV    0x1004
+#define BLE_MESH_MODEL_ID_GEN_DEF_TRANS_TIME_CLI    0x1005
+#define BLE_MESH_MODEL_ID_GEN_POWER_ONOFF_SRV       0x1006
+#define BLE_MESH_MODEL_ID_GEN_POWER_ONOFF_SETUP_SRV 0x1007
+#define BLE_MESH_MODEL_ID_GEN_POWER_ONOFF_CLI       0x1008
+#define BLE_MESH_MODEL_ID_GEN_POWER_LEVEL_SRV       0x1009
+#define BLE_MESH_MODEL_ID_GEN_POWER_LEVEL_SETUP_SRV 0x100a
+#define BLE_MESH_MODEL_ID_GEN_POWER_LEVEL_CLI       0x100b
+#define BLE_MESH_MODEL_ID_GEN_BATTERY_SRV           0x100c
+#define BLE_MESH_MODEL_ID_GEN_BATTERY_CLI           0x100d
+#define BLE_MESH_MODEL_ID_GEN_LOCATION_SRV          0x100e
+#define BLE_MESH_MODEL_ID_GEN_LOCATION_SETUPSRV     0x100f
+#define BLE_MESH_MODEL_ID_GEN_LOCATION_CLI          0x1010
+#define BLE_MESH_MODEL_ID_GEN_ADMIN_PROP_SRV        0x1011
+#define BLE_MESH_MODEL_ID_GEN_MANUFACTURER_PROP_SRV 0x1012
+#define BLE_MESH_MODEL_ID_GEN_USER_PROP_SRV         0x1013
+#define BLE_MESH_MODEL_ID_GEN_CLIENT_PROP_SRV       0x1014
+#define BLE_MESH_MODEL_ID_GEN_PROP_CLI              0x1015
+#define BLE_MESH_MODEL_ID_SENSOR_SRV                0x1100
+#define BLE_MESH_MODEL_ID_SENSOR_SETUP_SRV          0x1101
+#define BLE_MESH_MODEL_ID_SENSOR_CLI                0x1102
+#define BLE_MESH_MODEL_ID_TIME_SRV                  0x1200
+#define BLE_MESH_MODEL_ID_TIME_SETUP_SRV            0x1201
+#define BLE_MESH_MODEL_ID_TIME_CLI                  0x1202
+#define BLE_MESH_MODEL_ID_SCENE_SRV                 0x1203
+#define BLE_MESH_MODEL_ID_SCENE_SETUP_SRV           0x1204
+#define BLE_MESH_MODEL_ID_SCENE_CLI                 0x1205
+#define BLE_MESH_MODEL_ID_SCHEDULER_SRV             0x1206
+#define BLE_MESH_MODEL_ID_SCHEDULER_SETUP_SRV       0x1207
+#define BLE_MESH_MODEL_ID_SCHEDULER_CLI             0x1208
+#define BLE_MESH_MODEL_ID_LIGHT_LIGHTNESS_SRV       0x1300
+#define BLE_MESH_MODEL_ID_LIGHT_LIGHTNESS_SETUP_SRV 0x1301
+#define BLE_MESH_MODEL_ID_LIGHT_LIGHTNESS_CLI       0x1302
+#define BLE_MESH_MODEL_ID_LIGHT_CTL_SRV             0x1303
+#define BLE_MESH_MODEL_ID_LIGHT_CTL_SETUP_SRV       0x1304
+#define BLE_MESH_MODEL_ID_LIGHT_CTL_CLI             0x1305
+#define BLE_MESH_MODEL_ID_LIGHT_CTL_TEMP_SRV        0x1306
+#define BLE_MESH_MODEL_ID_LIGHT_HSL_SRV             0x1307
+#define BLE_MESH_MODEL_ID_LIGHT_HSL_SETUP_SRV       0x1308
+#define BLE_MESH_MODEL_ID_LIGHT_HSL_CLI             0x1309
+#define BLE_MESH_MODEL_ID_LIGHT_HSL_HUE_SRV         0x130a
+#define BLE_MESH_MODEL_ID_LIGHT_HSL_SAT_SRV         0x130b
+#define BLE_MESH_MODEL_ID_LIGHT_XYL_SRV             0x130c
+#define BLE_MESH_MODEL_ID_LIGHT_XYL_SETUP_SRV       0x130d
+#define BLE_MESH_MODEL_ID_LIGHT_XYL_CLI             0x130e
+#define BLE_MESH_MODEL_ID_LIGHT_LC_SRV              0x130f
+#define BLE_MESH_MODEL_ID_LIGHT_LC_SETUPSRV         0x1310
+#define BLE_MESH_MODEL_ID_LIGHT_LC_CLI              0x1311
 
 /** Message sending context. */
 struct bt_mesh_msg_ctx {
@@ -144,7 +143,7 @@ struct bt_mesh_msg_ctx {
     /** Force sending reliably by using segment acknowledgement */
     u8_t  send_rel: 1;
 
-    /** TTL, or BT_MESH_TTL_DEFAULT for default TTL. */
+    /** TTL, or BLE_MESH_TTL_DEFAULT for default TTL. */
     u8_t  send_ttl;
 
     /** Change by Espressif, opcode of a received message.
@@ -164,7 +163,7 @@ struct bt_mesh_msg_ctx {
 };
 
 struct bt_mesh_model_op {
-    /* OpCode encoded using the BT_MESH_MODEL_OP_* macros */
+    /* OpCode encoded using the BLE_MESH_MODEL_OP_* macros */
     const u32_t  opcode;
 
     /* Minimum required message length */
@@ -176,43 +175,43 @@ struct bt_mesh_model_op {
                        struct net_buf_simple *buf);
 };
 
-#define BT_MESH_MODEL_OP_1(b0) (b0)
-#define BT_MESH_MODEL_OP_2(b0, b1) (((b0) << 8) | (b1))
-#define BT_MESH_MODEL_OP_3(b0, cid) ((((b0) << 16) | 0xc00000) | (cid))
+#define BLE_MESH_MODEL_OP_1(b0)         (b0)
+#define BLE_MESH_MODEL_OP_2(b0, b1)     (((b0) << 8) | (b1))
+#define BLE_MESH_MODEL_OP_3(b0, cid)    ((((b0) << 16) | 0xc00000) | (cid))
 
-#define BT_MESH_MODEL_OP_END { 0, 0, NULL }
-#define BT_MESH_MODEL_NO_OPS ((struct bt_mesh_model_op []) \
-                  { BT_MESH_MODEL_OP_END })
+#define BLE_MESH_MODEL_OP_END           { 0, 0, NULL }
+#define BLE_MESH_MODEL_NO_OPS           ((struct bt_mesh_model_op []) \
+                                        { BLE_MESH_MODEL_OP_END })
 
 /** Helper to define an empty model array */
-#define BT_MESH_MODEL_NONE ((struct bt_mesh_model []){})
+#define BLE_MESH_MODEL_NONE ((struct bt_mesh_model []){})
 
-#define BT_MESH_MODEL(_id, _op, _pub, _user_data)                            \
-{                                                                            \
-    .id = (_id),                                                         \
-    .op = _op,                                                           \
-    .keys = { [0 ... (CONFIG_BT_MESH_MODEL_KEY_COUNT - 1)] =             \
-            BT_MESH_KEY_UNUSED },                                \
-    .pub = _pub,                                                         \
-    .groups = { [0 ... (CONFIG_BT_MESH_MODEL_GROUP_COUNT - 1)] =         \
-            BT_MESH_ADDR_UNASSIGNED },                           \
-    .user_data = _user_data,                                             \
+#define BLE_MESH_MODEL(_id, _op, _pub, _user_data)                  \
+{                                                                   \
+    .id = (_id),                                                    \
+    .op = _op,                                                      \
+    .keys = { [0 ... (CONFIG_BLE_MESH_MODEL_KEY_COUNT - 1)] =       \
+            BLE_MESH_KEY_UNUSED },                                  \
+    .pub = _pub,                                                    \
+    .groups = { [0 ... (CONFIG_BLE_MESH_MODEL_GROUP_COUNT - 1)] =   \
+            BLE_MESH_ADDR_UNASSIGNED },                             \
+    .user_data = _user_data,                                        \
 }
 
-#define BT_MESH_MODEL_VND(_company, _id, _op, _pub, _user_data)              \
-{                                                                            \
-    .vnd.company = (_company),                                           \
-    .vnd.id = (_id),                                                     \
-    .op = _op,                                                           \
-    .pub = _pub,                                                         \
-    .keys = { [0 ... (CONFIG_BT_MESH_MODEL_KEY_COUNT - 1)] =             \
-            BT_MESH_KEY_UNUSED },                                \
-    .groups = { [0 ... (CONFIG_BT_MESH_MODEL_GROUP_COUNT - 1)] =         \
-            BT_MESH_ADDR_UNASSIGNED },                           \
-    .user_data = _user_data,                                             \
+#define BLE_MESH_MODEL_VND(_company, _id, _op, _pub, _user_data)    \
+{                                                                   \
+    .vnd.company = (_company),                                      \
+    .vnd.id = (_id),                                                \
+    .op = _op,                                                      \
+    .pub = _pub,                                                    \
+    .keys = { [0 ... (CONFIG_BLE_MESH_MODEL_KEY_COUNT - 1)] =       \
+            BLE_MESH_KEY_UNUSED },                                  \
+    .groups = { [0 ... (CONFIG_BLE_MESH_MODEL_GROUP_COUNT - 1)] =   \
+            BLE_MESH_ADDR_UNASSIGNED },                             \
+    .user_data = _user_data,                                        \
 }
 
-/** @def BT_MESH_TRANSMIT
+/** @def BLE_MESH_TRANSMIT
  *
  *  @brief Encode transmission count & interval steps.
  *
@@ -223,9 +222,9 @@ struct bt_mesh_model_op {
  *  @return Mesh transmit value that can be used e.g. for the default
  *          values of the configuration model data.
  */
-#define BT_MESH_TRANSMIT(count, int_ms) ((count) | (((int_ms / 10) - 1) << 3))
+#define BLE_MESH_TRANSMIT(count, int_ms) ((count) | (((int_ms / 10) - 1) << 3))
 
-/** @def BT_MESH_TRANSMIT_COUNT
+/** @def BLE_MESH_TRANSMIT_COUNT
  *
  *  @brief Decode transmit count from a transmit value.
  *
@@ -233,9 +232,9 @@ struct bt_mesh_model_op {
  *
  *  @return Transmission count (actual transmissions is N + 1).
  */
-#define BT_MESH_TRANSMIT_COUNT(transmit) (((transmit) & (u8_t)BIT_MASK(3)))
+#define BLE_MESH_TRANSMIT_COUNT(transmit) (((transmit) & (u8_t)BIT_MASK(3)))
 
-/** @def BT_MESH_TRANSMIT_INT
+/** @def BLE_MESH_TRANSMIT_INT
  *
  *  @brief Decode transmit interval from a transmit value.
  *
@@ -243,9 +242,9 @@ struct bt_mesh_model_op {
  *
  *  @return Transmission interval in milliseconds.
  */
-#define BT_MESH_TRANSMIT_INT(transmit) ((((transmit) >> 3) + 1) * 10)
+#define BLE_MESH_TRANSMIT_INT(transmit) ((((transmit) >> 3) + 1) * 10)
 
-/** @def BT_MESH_PUB_TRANSMIT
+/** @def BLE_MESH_PUB_TRANSMIT
  *
  *  @brief Encode Publish Retransmit count & interval steps.
  *
@@ -256,10 +255,9 @@ struct bt_mesh_model_op {
  *  @return Mesh transmit value that can be used e.g. for the default
  *          values of the configuration model data.
  */
-#define BT_MESH_PUB_TRANSMIT(count, int_ms) BT_MESH_TRANSMIT(count,           \
-                                 (int_ms) / 5)
+#define BLE_MESH_PUB_TRANSMIT(count, int_ms) BLE_MESH_TRANSMIT(count, (int_ms) / 5)
 
-/** @def BT_MESH_PUB_TRANSMIT_COUNT
+/** @def BLE_MESH_PUB_TRANSMIT_COUNT
  *
  *  @brief Decode Pubhlish Retransmit count from a given value.
  *
@@ -267,9 +265,9 @@ struct bt_mesh_model_op {
  *
  *  @return Retransmission count (actual transmissions is N + 1).
  */
-#define BT_MESH_PUB_TRANSMIT_COUNT(transmit) BT_MESH_TRANSMIT_COUNT(transmit)
+#define BLE_MESH_PUB_TRANSMIT_COUNT(transmit) BLE_MESH_TRANSMIT_COUNT(transmit)
 
-/** @def BT_MESH_PUB_TRANSMIT_INT
+/** @def BLE_MESH_PUB_TRANSMIT_INT
  *
  *  @brief Decode Publish Retransmit interval from a given value.
  *
@@ -277,7 +275,7 @@ struct bt_mesh_model_op {
  *
  *  @return Transmission interval in milliseconds.
  */
-#define BT_MESH_PUB_TRANSMIT_INT(transmit) ((((transmit) >> 3) + 1) * 50)
+#define BLE_MESH_PUB_TRANSMIT_INT(transmit) ((((transmit) >> 3) + 1) * 50)
 
 /** Model publication context. */
 struct bt_mesh_model_pub {
@@ -336,22 +334,6 @@ struct bt_mesh_model_pub {
     struct k_delayed_work timer;
 };
 
-/** @def BT_MESH_MODEL_PUB_DEFINE
- *
- *  Define a model publication context.
- *
- *  @param _name Variable name given to the context.
- *  @param _update Optional message update callback (may be NULL).
- *  @param _msg_len Length of the publication message.
- */
-#define BT_MESH_MODEL_PUB_DEFINE(_name, _update, _msg_len) \
-    NET_BUF_SIMPLE_DEFINE_STATIC(bt_mesh_pub_msg_##_name, _msg_len); \
-    static struct bt_mesh_model_pub _name = { \
-        .update = _update, \
-        .msg = &bt_mesh_pub_msg_##_name, \
-    }
-
-
 /** Abstraction that describes a Mesh Model instance */
 struct bt_mesh_model {
     union {
@@ -369,10 +351,10 @@ struct bt_mesh_model {
     struct bt_mesh_model_pub *const pub;
 
     /* AppKey List */
-    u16_t keys[CONFIG_BT_MESH_MODEL_KEY_COUNT];
+    u16_t keys[CONFIG_BLE_MESH_MODEL_KEY_COUNT];
 
     /* Subscription List (group or virtual addresses) */
-    u16_t groups[CONFIG_BT_MESH_MODEL_GROUP_COUNT];
+    u16_t groups[CONFIG_BLE_MESH_MODEL_GROUP_COUNT];
 
     const struct bt_mesh_model_op *const op;
 
@@ -393,10 +375,10 @@ struct bt_mesh_send_cb {
 void bt_mesh_model_msg_init(struct net_buf_simple *msg, u32_t opcode);
 
 /** Special TTL value to request using configured default TTL */
-#define BT_MESH_TTL_DEFAULT 0xff
+#define BLE_MESH_TTL_DEFAULT    0xff
 
 /** Maximum allowed TTL value */
-#define BT_MESH_TTL_MAX     0x7f
+#define BLE_MESH_TTL_MAX        0x7f
 
 /**
  * @brief Send an Access Layer message.
@@ -445,5 +427,4 @@ struct bt_mesh_comp {
  * @}
  */
 
-#endif /* __BT_MESH_ACCESS_H */
-#endif /* #if CONFIG_BT_MESH */
+#endif /* __BLE_MESH_ACCESS_H */

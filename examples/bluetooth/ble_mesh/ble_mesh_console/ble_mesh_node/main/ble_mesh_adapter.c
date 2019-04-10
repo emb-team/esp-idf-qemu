@@ -28,7 +28,7 @@ esp_ble_mesh_model_t *ble_mesh_get_model(uint16_t model_id)
     case ESP_BLE_MESH_MODEL_ID_GEN_ONOFF_SRV:
         model = &gen_onoff_srv_models[1];
         break;
-#if (CONFIG_BT_MESH_GENERIC_ONOFF_CLI)
+#if (CONFIG_BLE_MESH_GENERIC_ONOFF_CLI)
     case ESP_BLE_MESH_MODEL_ID_GEN_ONOFF_CLI:
         model = &gen_onoff_cli_models[1];
         break;
@@ -57,7 +57,7 @@ esp_ble_mesh_comp_t *ble_mesh_get_component(uint16_t model_id)
     case ESP_BLE_MESH_MODEL_ID_GEN_ONOFF_SRV:
         comp = &gen_onoff_srv_comp;
         break;
-#if (CONFIG_BT_MESH_GENERIC_ONOFF_CLI)
+#if (CONFIG_BLE_MESH_GENERIC_ONOFF_CLI)
     case ESP_BLE_MESH_MODEL_ID_GEN_ONOFF_CLI:
         comp = &gen_onoff_cli_comp;
         break;

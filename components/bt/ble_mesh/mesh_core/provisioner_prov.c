@@ -19,25 +19,24 @@
 #include "sdkconfig.h"
 #include "osi/allocator.h"
 
-#if CONFIG_BT_MESH
-#include "mesh.h"
 #include "mesh_main.h"
 #include "mesh_trace.h"
 
 #include "crypto.h"
 #include "adv.h"
+#include "mesh.h"
 #include "provisioner_prov.h"
 #include "provisioner_proxy.h"
 #include "provisioner_main.h"
 
-#if CONFIG_BT_MESH_PROVISIONER
+#if CONFIG_BLE_MESH_PROVISIONER
 
 #define CONFIG_BT_MAX_CONN      CONFIG_BT_ACL_CONNECTIONS
 
 /* Service data length has minus 1 type length & 2 uuid length*/
-#define BT_MESH_PROV_SRV_DATA_LEN       0x12
-#define BT_MESH_PROXY_SRV_DATA_LEN1     0x09
-#define BT_MESH_PROXY_SRV_DATA_LEN2     0x11
+#define BLE_MESH_PROV_SRV_DATA_LEN       0x12
+#define BLE_MESH_PROXY_SRV_DATA_LEN1     0x09
+#define BLE_MESH_PROXY_SRV_DATA_LEN2     0x11
 
 /* 3 transmissions, 20ms interval */
 #define PROV_XMIT_COUNT        2
@@ -138,7 +137,7 @@ enum {
  * |<----------------------Total Link---------------------->|
  */
 struct prov_link {
-    ATOMIC_DEFINE(flags, NUM_FLAGS);
+    BLE_MESH_ATOMIC_DEFINE(flags, NUM_FLAGS);
     u8_t  uuid[16];          /* check if device is being provisioned*/
     u16_t oob_info;          /* oob info of this device */
     u8_t  element_num;       /* element num of device */
@@ -148,10 +147,10 @@ struct prov_link {
     u8_t  auth_action;       /* choosed authentication action */
     u8_t  auth_size;         /* choosed authentication size */
     u16_t unicast_addr;      /* unicast address assigned for device */
-    bt_addr_le_t addr;       /* Device address */
-#if defined(CONFIG_BT_MESH_PB_GATT)
+    bt_mesh_addr_t addr;       /* Device address */
+#if defined(CONFIG_BLE_MESH_PB_GATT)
     bool   connecting;       /* start connecting with device */
-    struct bt_conn *conn;    /* GATT connection */
+    struct bt_mesh_conn *conn; /* GATT connection */
 #endif
     u8_t  expect;            /* Next expected PDU */
 
@@ -167,7 +166,7 @@ struct prov_link {
 
     u8_t *prov_salt;         /* Provisioning Salt */
 
-#if defined(CONFIG_BT_MESH_PB_ADV)
+#if defined(CONFIG_BLE_MESH_PB_ADV)
     bool  linking;           /* Linking is being establishing */
     u16_t link_close;        /* Link close been sent flag */
     u32_t link_id;           /* Link ID */
@@ -211,7 +210,7 @@ struct prov_rx {
     u8_t  gpc;
 };
 
-#define BT_MESH_ALREADY_PROV_NUM  (CONFIG_BT_MESH_MAX_PROV_NODES + 10)
+#define BLE_MESH_ALREADY_PROV_NUM  (CONFIG_BLE_MESH_MAX_PROV_NODES + 10)
 
 struct prov_ctx_t {
     /* If provisioning random have been generated, set BIT0 to 1 */
@@ -266,12 +265,12 @@ struct prov_ctx_t {
         u8_t  uuid[16];     /* device uuid */
         u8_t  element_num;  /* element number of the deleted node */
         u16_t unicast_addr; /* Primary unicast address of the deleted node */
-    } already_prov[BT_MESH_ALREADY_PROV_NUM];
+    } already_prov[BLE_MESH_ALREADY_PROV_NUM];
 };
 
 struct prov_node_info {
     bool  provisioned;      /* device provisioned flag */
-    bt_addr_le_t addr;      /* device address */
+    bt_mesh_addr_t addr;      /* device address */
     u8_t  uuid[16];         /* node uuid */
     u16_t oob_info;         /* oob info contained in adv pkt */
     u8_t  element_num;      /* element contained in this node */
@@ -282,13 +281,13 @@ struct prov_node_info {
 };
 
 struct unprov_dev_queue {
-    bt_addr_le_t addr;
+    bt_mesh_addr_t addr;
     u8_t         uuid[16];
     u16_t        oob_info;
     u8_t         bearer;
     u8_t         flags;
-} __packed unprov_dev[CONFIG_BT_MESH_UNPROV_DEV_ADD] = {
-    [0 ... (CONFIG_BT_MESH_UNPROV_DEV_ADD - 1)] = {
+} __packed unprov_dev[CONFIG_BLE_MESH_WAIT_FOR_PROV_MAX_DEV_NUM] = {
+    [0 ... (CONFIG_BLE_MESH_WAIT_FOR_PROV_MAX_DEV_NUM - 1)] = {
         .addr.type = 0xff,
         .bearer    = 0,
         .flags     = false,
@@ -299,15 +298,15 @@ static unprov_adv_pkt_cb_t notify_unprov_adv_pkt_cb;
 
 #define RETRANSMIT_TIMEOUT   K_MSEC(500)
 #define BUF_TIMEOUT          K_MSEC(400)
-#if defined(CONFIG_BT_MESH_FAST_PROV)
+#if defined(CONFIG_BLE_MESH_FAST_PROV)
 #define TRANSACTION_TIMEOUT  K_SECONDS(3)
 #define PROVISION_TIMEOUT    K_SECONDS(6)
 #else
 #define TRANSACTION_TIMEOUT  K_SECONDS(30)
 #define PROVISION_TIMEOUT    K_SECONDS(60)
-#endif /* CONFIG_BT_MESH_FAST_PROV */
+#endif /* CONFIG_BLE_MESH_FAST_PROV */
 
-#if defined(CONFIG_BT_MESH_PB_GATT)
+#if defined(CONFIG_BLE_MESH_PB_GATT)
 #define PROV_BUF_HEADROOM 5
 #else
 #define PROV_BUF_HEADROOM 0
@@ -316,17 +315,17 @@ static unprov_adv_pkt_cb_t notify_unprov_adv_pkt_cb;
 #define PROV_BUF(len) NET_BUF_SIMPLE(PROV_BUF_HEADROOM + len)
 
 /* Number of devices can be provisioned at the same time using PB-GATT + PB-ADV */
-#define BT_MESH_PROV_SAME_TIME (CONFIG_BT_MESH_PBA_SAME_TIME + CONFIG_BT_MESH_PBG_SAME_TIME)
+#define BLE_MESH_PROV_SAME_TIME (CONFIG_BLE_MESH_PBA_SAME_TIME + CONFIG_BLE_MESH_PBG_SAME_TIME)
 
-static struct prov_link link[BT_MESH_PROV_SAME_TIME];
+static struct prov_link link[BLE_MESH_PROV_SAME_TIME];
 
 static const struct bt_mesh_prov *prov;
 
 static struct prov_ctx_t prov_ctx;
 
-static struct prov_node_info prov_nodes[CONFIG_BT_MESH_MAX_PROV_NODES];
+static struct prov_node_info prov_nodes[CONFIG_BLE_MESH_MAX_PROV_NODES];
 
-#if defined(CONFIG_BT_MESH_PB_ADV)
+#if defined(CONFIG_BLE_MESH_PB_ADV)
 static void send_link_open(void);
 #endif
 
@@ -336,12 +335,12 @@ static void send_pub_key(u8_t oob);
 
 static void close_link(int i, u8_t reason);
 
-#if defined(CONFIG_BT_MESH_PB_ADV)
+#if defined(CONFIG_BLE_MESH_PB_ADV)
 #define ADV_BUF_SIZE  65
 static struct adv_buf_t {
     struct net_buf_simple buf;
     u8_t                  adv_buf_data[ADV_BUF_SIZE];
-} adv_buf[CONFIG_BT_MESH_PBA_SAME_TIME];
+} adv_buf[CONFIG_BLE_MESH_PBA_SAME_TIME];
 #endif
 
 #define PROV_FREE_MEM(id, member)   \
@@ -388,30 +387,30 @@ void provisioner_pbg_count_inc(void)
 
 void provisioner_clear_link_conn_info(u8_t addr[6])
 {
-#if defined(CONFIG_BT_MESH_PB_GATT)
+#if defined(CONFIG_BLE_MESH_PB_GATT)
     if (!addr) {
         BT_ERR("%s, Invalid parameter", __func__);
         return;
     }
 
-    BT_DBG("%s, Clear device %s info", __func__, bt_hex(addr, BD_ADDR_LEN));
+    BT_DBG("%s, Clear device %s info", __func__, bt_hex(addr, BLE_MESH_ADDR_LEN));
 
-    for (int i = CONFIG_BT_MESH_PBA_SAME_TIME; i < BT_MESH_PROV_SAME_TIME; i++) {
-        if (!memcmp(link[i].addr.a.val, addr, BD_ADDR_LEN)) {
+    for (int i = CONFIG_BLE_MESH_PBA_SAME_TIME; i < BLE_MESH_PROV_SAME_TIME; i++) {
+        if (!memcmp(link[i].addr.val, addr, BLE_MESH_ADDR_LEN)) {
             link[i].connecting = false;
             link[i].conn = NULL;
             link[i].oob_info = 0x0;
             memset(link[i].uuid, 0, 16);
-            memset(&link[i].addr, 0, sizeof(bt_addr_le_t));
-            atomic_test_and_clear_bit(link[i].flags, LINK_ACTIVE);
-            if (atomic_test_and_clear_bit(link[i].flags, TIMEOUT_START)) {
+            memset(&link[i].addr, 0, sizeof(bt_mesh_addr_t));
+            bt_mesh_atomic_test_and_clear_bit(link[i].flags, LINK_ACTIVE);
+            if (bt_mesh_atomic_test_and_clear_bit(link[i].flags, TIMEOUT_START)) {
                 k_delayed_work_cancel(&link[i].timeout);
             }
             return;
         }
     }
 
-    BT_WARN("%s, Address %s is not found", __func__, bt_hex(addr, BD_ADDR_LEN));
+    BT_WARN("%s, Address %s is not found", __func__, bt_hex(addr, BLE_MESH_ADDR_LEN));
     return;
 #endif
 }
@@ -438,7 +437,7 @@ int provisioner_prov_reset_all_nodes(void)
     return 0;
 }
 
-static int provisioner_dev_find(const bt_addr_le_t *addr, const u8_t uuid[16], int *index)
+static int provisioner_dev_find(const bt_mesh_addr_t *addr, const u8_t uuid[16], int *index)
 {
     bool uuid_match = false;
     bool addr_match = false;
@@ -446,7 +445,7 @@ static int provisioner_dev_find(const bt_addr_le_t *addr, const u8_t uuid[16], i
     int i = 0, j = 0, comp = 0;
 
     if (addr) {
-        comp = memcmp(addr->a.val, zero, BD_ADDR_LEN);
+        comp = memcmp(addr->val, zero, BLE_MESH_ADDR_LEN);
     }
 
     if ((!uuid && (!addr || (comp == 0) || (addr->type > BLE_ADDR_RANDOM))) || !index) {
@@ -468,7 +467,7 @@ static int provisioner_dev_find(const bt_addr_le_t *addr, const u8_t uuid[16], i
 
     if (addr && comp && (addr->type <= BLE_ADDR_RANDOM)) {
         for (j = 0; j < ARRAY_SIZE(unprov_dev); j++) {
-            if (!memcmp(unprov_dev[j].addr.a.val, addr->a.val, BD_ADDR_LEN) &&
+            if (!memcmp(unprov_dev[j].addr.val, addr->val, BLE_MESH_ADDR_LEN) &&
                     unprov_dev[j].addr.type == addr->type) {
                 addr_match = true;
                 break;
@@ -487,7 +486,7 @@ static int provisioner_dev_find(const bt_addr_le_t *addr, const u8_t uuid[16], i
          *  will be decided by uuid element.
          */
         unprov_dev[i].addr.type = unprov_dev[j].addr.type;
-        memcpy(unprov_dev[i].addr.a.val, unprov_dev[j].addr.a.val, BD_ADDR_LEN);
+        memcpy(unprov_dev[i].addr.val, unprov_dev[j].addr.val, BLE_MESH_ADDR_LEN);
         unprov_dev[i].bearer |= unprov_dev[j].bearer;
         memset(&unprov_dev[j], 0x0, sizeof(struct unprov_dev_queue));
     }
@@ -528,11 +527,11 @@ static int provisioner_check_device_uuid(const u8_t uuid[16])
      * receive the connectable prov adv pkt from this device.
      * Here we check both PB-GATT and PB-ADV link status.
      */
-    for (i = 0; i < BT_MESH_PROV_SAME_TIME; i++) {
-#if defined(CONFIG_BT_MESH_PB_GATT)
-        if (link[i].connecting || atomic_test_bit(link[i].flags, LINK_ACTIVE)) {
+    for (i = 0; i < BLE_MESH_PROV_SAME_TIME; i++) {
+#if defined(CONFIG_BLE_MESH_PB_GATT)
+        if (link[i].connecting || bt_mesh_atomic_test_bit(link[i].flags, LINK_ACTIVE)) {
 #else
-        if (link[i].linking || atomic_test_bit(link[i].flags, LINK_ACTIVE)) {
+        if (link[i].linking || bt_mesh_atomic_test_bit(link[i].flags, LINK_ACTIVE)) {
 #endif
             if (!memcmp(link[i].uuid, uuid, 16)) {
                 BT_DBG("%s, Device is being provisioned", __func__);
@@ -572,27 +571,27 @@ static int provisioner_check_device_uuid(const u8_t uuid[16])
 }
 
 static int provisioner_start_prov_device(bt_mesh_prov_bearer_t bearer, const u8_t uuid[16],
-                const bt_addr_le_t *addr, u16_t oob_info)
+                const bt_mesh_addr_t *addr, u16_t oob_info)
 {
     u8_t zero[6] = {0};
     int addr_cmp, i;
 
-    if ((bearer != BT_MESH_PROV_ADV && bearer != BT_MESH_PROV_GATT) || !uuid || !addr) {
+    if ((bearer != BLE_MESH_PROV_ADV && bearer != BLE_MESH_PROV_GATT) || !uuid || !addr) {
         BT_ERR("%s, Invalid parameter", __func__);
         return -EINVAL;
     }
 
-    addr_cmp = memcmp(addr->a.val, zero, BD_ADDR_LEN);
+    addr_cmp = memcmp(addr->val, zero, BLE_MESH_ADDR_LEN);
 
-    if (bearer == BT_MESH_PROV_ADV) {
-#if defined(CONFIG_BT_MESH_PB_ADV)
-        for (i = 0; i < CONFIG_BT_MESH_PBA_SAME_TIME; i++) {
-            if (!atomic_test_bit(link[i].flags, LINK_ACTIVE) && !link[i].linking) {
+    if (bearer == BLE_MESH_PROV_ADV) {
+#if defined(CONFIG_BLE_MESH_PB_ADV)
+        for (i = 0; i < CONFIG_BLE_MESH_PBA_SAME_TIME; i++) {
+            if (!bt_mesh_atomic_test_bit(link[i].flags, LINK_ACTIVE) && !link[i].linking) {
                 memcpy(link[i].uuid, uuid, 16);
                 link[i].oob_info = oob_info;
                 if (addr_cmp && (addr->type <= BLE_ADDR_RANDOM)) {
                     link[i].addr.type = addr->type;
-                    memcpy(link[i].addr.a.val, addr->a.val, BD_ADDR_LEN);
+                    memcpy(link[i].addr.val, addr->val, BLE_MESH_ADDR_LEN);
                 }
                 prov_set_pb_index(i);
                 send_link_open();
@@ -606,26 +605,26 @@ static int provisioner_start_prov_device(bt_mesh_prov_bearer_t bearer, const u8_
                  */
                 link[i].linking = true;
                 if (prov->prov_link_open) {
-                    prov->prov_link_open(BT_MESH_PROV_ADV);
+                    prov->prov_link_open(BLE_MESH_PROV_ADV);
                 }
                 return 0;
             }
         }
 #endif
     } else {
-#if defined(CONFIG_BT_MESH_PB_GATT)
-        for (i = CONFIG_BT_MESH_PBA_SAME_TIME; i < BT_MESH_PROV_SAME_TIME; i++) {
-            if (!atomic_test_bit(link[i].flags, LINK_ACTIVE) && !link[i].connecting) {
+#if defined(CONFIG_BLE_MESH_PB_GATT)
+        for (i = CONFIG_BLE_MESH_PBA_SAME_TIME; i < BLE_MESH_PROV_SAME_TIME; i++) {
+            if (!bt_mesh_atomic_test_bit(link[i].flags, LINK_ACTIVE) && !link[i].connecting) {
                 memcpy(link[i].uuid, uuid, 16);
                 link[i].oob_info = oob_info;
                 if (addr_cmp && (addr->type <= BLE_ADDR_RANDOM)) {
                     link[i].addr.type = addr->type;
-                    memcpy(link[i].addr.a.val, addr->a.val, BD_ADDR_LEN);
+                    memcpy(link[i].addr.val, addr->val, BLE_MESH_ADDR_LEN);
                 }
-                if (bt_mesh_gattc_conn_create(&link[i].addr, BT_UUID_MESH_PROV_VAL)) {
+                if (bt_mesh_gattc_conn_create(&link[i].addr, BLE_MESH_UUID_MESH_PROV_VAL)) {
                     memset(link[i].uuid, 0, 16);
                     link[i].oob_info = 0x0;
-                    memset(&link[i].addr, 0, sizeof(bt_addr_le_t));
+                    memset(&link[i].addr, 0, sizeof(bt_mesh_addr_t));
                     return -EIO;
                 }
                 /* If creating connection successfully, set connecting flag to 1 */
@@ -636,13 +635,13 @@ static int provisioner_start_prov_device(bt_mesh_prov_bearer_t bearer, const u8_
 #endif
     }
 
-    BT_ERR("%s, no link is available", __func__);
+    BT_ERR("%s, No link is available", __func__);
     return -ENOMEM;
 }
 
 int bt_mesh_provisioner_add_unprov_dev(struct bt_mesh_unprov_dev_add *add_dev, u8_t flags)
 {
-    bt_addr_le_t add_addr = {0};
+    bt_mesh_addr_t add_addr = {0};
     u8_t zero[16] = {0};
     int addr_cmp = 0, uuid_cmp = 0;
     int i, err = 0;
@@ -652,7 +651,7 @@ int bt_mesh_provisioner_add_unprov_dev(struct bt_mesh_unprov_dev_add *add_dev, u
         return -EINVAL;
     }
 
-    addr_cmp = memcmp(add_dev->addr, zero, BD_ADDR_LEN);
+    addr_cmp = memcmp(add_dev->addr, zero, BLE_MESH_ADDR_LEN);
     uuid_cmp = memcmp(add_dev->uuid, zero, 16);
 
     if (add_dev->bearer == 0x0 || ((uuid_cmp == 0) &&
@@ -661,7 +660,7 @@ int bt_mesh_provisioner_add_unprov_dev(struct bt_mesh_unprov_dev_add *add_dev, u
         return -EINVAL;
     }
 
-    if ((add_dev->bearer & BT_MESH_PROV_ADV) && (add_dev->bearer & BT_MESH_PROV_GATT) &&
+    if ((add_dev->bearer & BLE_MESH_PROV_ADV) && (add_dev->bearer & BLE_MESH_PROV_GATT) &&
             (flags & START_PROV_NOW)) {
         BT_ERR("%s, Can not start PB-ADV & PB-GATT simultaneouly", __func__);
         return -EINVAL;
@@ -672,28 +671,28 @@ int bt_mesh_provisioner_add_unprov_dev(struct bt_mesh_unprov_dev_add *add_dev, u
         return -EINVAL;
     }
 
-    if ((add_dev->bearer & BT_MESH_PROV_GATT) && (flags & START_PROV_NOW) &&
+    if ((add_dev->bearer & BLE_MESH_PROV_GATT) && (flags & START_PROV_NOW) &&
             ((addr_cmp == 0) || add_dev->addr_type > BLE_ADDR_RANDOM)) {
         BT_ERR("%s, Invalid device address for PB-GATT", __func__);
         return -EINVAL;
     }
 
-    if (add_dev->bearer & BT_MESH_PROV_GATT) {
-#if !CONFIG_BT_MESH_PB_GATT
+    if (add_dev->bearer & BLE_MESH_PROV_GATT) {
+#if !CONFIG_BLE_MESH_PB_GATT
         BT_ERR("%s, Not support PB-GATT", __func__);
         return -EINVAL;
 #endif
     }
 
-    if (add_dev->bearer & BT_MESH_PROV_ADV) {
-#if !CONFIG_BT_MESH_PB_ADV
+    if (add_dev->bearer & BLE_MESH_PROV_ADV) {
+#if !CONFIG_BLE_MESH_PB_ADV
         BT_ERR("%s, Not support PB-ADV", __func__);
         return -EINVAL;
 #endif
     }
 
     add_addr.type = add_dev->addr_type;
-    memcpy(add_addr.a.val, add_dev->addr, BD_ADDR_LEN);
+    memcpy(add_addr.val, add_dev->addr, BLE_MESH_ADDR_LEN);
 
     err = provisioner_dev_find(&add_addr, add_dev->uuid, &i);
     if (err == -EINVAL) {
@@ -715,7 +714,7 @@ int bt_mesh_provisioner_add_unprov_dev(struct bt_mesh_unprov_dev_add *add_dev, u
         }
         if (addr_cmp && (add_dev->addr_type <= BLE_ADDR_RANDOM)) {
             unprov_dev[i].addr.type = add_dev->addr_type;
-            memcpy(unprov_dev[i].addr.a.val, add_dev->addr, BD_ADDR_LEN);
+            memcpy(unprov_dev[i].addr.val, add_dev->addr, BLE_MESH_ADDR_LEN);
         }
         if (uuid_cmp) {
             memcpy(unprov_dev[i].uuid, add_dev->uuid, 16);
@@ -731,7 +730,7 @@ int bt_mesh_provisioner_add_unprov_dev(struct bt_mesh_unprov_dev_add *add_dev, u
             memset(&unprov_dev[i], 0, sizeof(struct unprov_dev_queue));
             if (addr_cmp && (add_dev->addr_type <= BLE_ADDR_RANDOM)) {
                 unprov_dev[i].addr.type = add_dev->addr_type;
-                memcpy(unprov_dev[i].addr.a.val, add_dev->addr, BD_ADDR_LEN);
+                memcpy(unprov_dev[i].addr.val, add_dev->addr, BLE_MESH_ADDR_LEN);
             }
             if (uuid_cmp) {
                 memcpy(unprov_dev[i].uuid, add_dev->uuid, 16);
@@ -761,24 +760,24 @@ start:
         return err;
     }
 
-    if (add_dev->bearer & BT_MESH_PROV_ADV) {
-#if defined(CONFIG_BT_MESH_PB_ADV)
-        if (prov_ctx.pba_count == CONFIG_BT_MESH_PBA_SAME_TIME) {
+    if (add_dev->bearer & BLE_MESH_PROV_ADV) {
+#if defined(CONFIG_BLE_MESH_PB_ADV)
+        if (prov_ctx.pba_count == CONFIG_BLE_MESH_PBA_SAME_TIME) {
             BT_WARN("%s, Current PB-ADV links reach max limit", __func__);
             return -EIO;
         }
-        if ((err = provisioner_start_prov_device(BT_MESH_PROV_ADV,
+        if ((err = provisioner_start_prov_device(BLE_MESH_PROV_ADV,
                 add_dev->uuid, &add_addr, add_dev->oob_info))) {
             return err;
         }
 #endif
-    } else if (add_dev->bearer & BT_MESH_PROV_GATT) {
-#if defined(CONFIG_BT_MESH_PB_GATT)
-        if (prov_ctx.pbg_count == CONFIG_BT_MESH_PBG_SAME_TIME) {
+    } else if (add_dev->bearer & BLE_MESH_PROV_GATT) {
+#if defined(CONFIG_BLE_MESH_PB_GATT)
+        if (prov_ctx.pbg_count == CONFIG_BLE_MESH_PBG_SAME_TIME) {
             BT_WARN("%s, Current PB-GATT links reach max limit", __func__);
             return -EIO;
         }
-        if ((err = provisioner_start_prov_device(BT_MESH_PROV_GATT,
+        if ((err = provisioner_start_prov_device(BLE_MESH_PROV_GATT,
                 add_dev->uuid, &add_addr, add_dev->oob_info))) {
             return err;
         }
@@ -798,7 +797,7 @@ int bt_mesh_provisioner_delete_device(struct bt_mesh_device_delete *del_dev)
      *    remove from device queue. config _node_reset can be added in function
      *    provisioner_node_reset() in provisioner_main.c.
      */
-    bt_addr_le_t del_addr = {0};
+    bt_mesh_addr_t del_addr = {0};
     u8_t zero[16] = {0};
     int addr_cmp = 0, uuid_cmp = 0;
     bool addr_match = false;
@@ -810,7 +809,7 @@ int bt_mesh_provisioner_delete_device(struct bt_mesh_device_delete *del_dev)
         return -EINVAL;
     }
 
-    addr_cmp = memcmp(del_dev->addr, zero, BD_ADDR_LEN);
+    addr_cmp = memcmp(del_dev->addr, zero, BLE_MESH_ADDR_LEN);
     uuid_cmp = memcmp(del_dev->uuid, zero, 16);
 
     if ((uuid_cmp == 0) && ((addr_cmp == 0) || del_dev->addr_type > BLE_ADDR_RANDOM)) {
@@ -819,7 +818,7 @@ int bt_mesh_provisioner_delete_device(struct bt_mesh_device_delete *del_dev)
     }
 
     del_addr.type = del_dev->addr_type;
-    memcpy(del_addr.a.val, del_dev->addr, BD_ADDR_LEN);
+    memcpy(del_addr.val, del_dev->addr, BLE_MESH_ADDR_LEN);
 
     /* First: find if the device is in the device queue */
     err = provisioner_dev_find(&del_addr, del_dev->uuid, &i);
@@ -832,7 +831,7 @@ int bt_mesh_provisioner_delete_device(struct bt_mesh_device_delete *del_dev)
     /* Second: find if the device is being provisioned */
     for (i = 0; i < ARRAY_SIZE(link); i++) {
         if (addr_cmp && (del_dev->addr_type <= BLE_ADDR_RANDOM)) {
-            if (!memcmp(link[i].addr.a.val, del_dev->addr, BD_ADDR_LEN) &&
+            if (!memcmp(link[i].addr.val, del_dev->addr, BLE_MESH_ADDR_LEN) &&
                     link[i].addr.type == del_dev->addr_type) {
                 addr_match = true;
             }
@@ -851,7 +850,7 @@ int bt_mesh_provisioner_delete_device(struct bt_mesh_device_delete *del_dev)
     /* Third: find if the device is been provisioned */
     for (i = 0; i < ARRAY_SIZE(prov_nodes); i++) {
         if (addr_cmp && (del_dev->addr_type <= BLE_ADDR_RANDOM)) {
-            if (!memcmp(prov_nodes[i].addr.a.val, del_dev->addr, BD_ADDR_LEN) &&
+            if (!memcmp(prov_nodes[i].addr.val, del_dev->addr, BLE_MESH_ADDR_LEN) &&
                     prov_nodes[i].addr.type == del_dev->addr_type) {
                 addr_match = true;
             }
@@ -962,7 +961,7 @@ u16_t provisioner_get_fast_prov_net_idx(void)
 
 u8_t bt_mesh_set_fast_prov_unicast_addr_range(u16_t min, u16_t max)
 {
-    if (!BT_MESH_ADDR_IS_UNICAST(min) || !BT_MESH_ADDR_IS_UNICAST(max)) {
+    if (!BLE_MESH_ADDR_IS_UNICAST(min) || !BLE_MESH_ADDR_IS_UNICAST(max)) {
         BT_ERR("%s, Not a unicast address", __func__);
         return 0x01; /* status: not a unicast address */
     }
@@ -992,7 +991,7 @@ void bt_mesh_set_fast_prov_flags_iv_index(u8_t flags, u32_t iv_index)
     fast_prov.iv_index = iv_index;
 }
 
-#if defined(CONFIG_BT_MESH_PB_ADV)
+#if defined(CONFIG_BLE_MESH_PB_ADV)
 static struct net_buf_simple *bt_mesh_pba_get_buf(int id)
 {
     struct net_buf_simple *buf = &(adv_buf[id].buf);
@@ -1001,7 +1000,7 @@ static struct net_buf_simple *bt_mesh_pba_get_buf(int id)
 
     return buf;
 }
-#endif /* CONFIG_BT_MESH_PB_ADV */
+#endif /* CONFIG_BLE_MESH_PB_ADV */
 
 static void prov_memory_free(int i)
 {
@@ -1014,7 +1013,7 @@ static void prov_memory_free(int i)
     PROV_FREE_MEM(i, prov_salt);
 }
 
-#if defined(CONFIG_BT_MESH_PB_ADV)
+#if defined(CONFIG_BLE_MESH_PB_ADV)
 static void buf_sent(int err, void *user_data)
 {
     int i = (int)user_data;
@@ -1043,7 +1042,7 @@ static void free_segments(int id)
 
         link[id].tx.buf[i] = NULL;
         /* Mark as canceled */
-        BT_MESH_ADV(buf)->busy = 0;
+        BLE_MESH_ADV(buf)->busy = 0;
         /** Change by Espressif. Add this to avoid buf->ref is 2 which will
          *  cause lack of buf.
          */
@@ -1067,20 +1066,20 @@ static void reset_link(int i, u8_t reason)
 {
     prov_clear_tx(i);
 
-    if (atomic_test_and_clear_bit(link[i].flags, TIMEOUT_START)) {
+    if (bt_mesh_atomic_test_and_clear_bit(link[i].flags, TIMEOUT_START)) {
         k_delayed_work_cancel(&link[i].timeout);
     }
 
     if (prov->prov_link_close) {
-        prov->prov_link_close(BT_MESH_PROV_ADV, reason);
+        prov->prov_link_close(BLE_MESH_PROV_ADV, reason);
     }
 
     prov_memory_free(i);
 
-#if defined(CONFIG_BT_MESH_USE_DUPLICATE_SCAN)
+#if defined(CONFIG_BLE_MESH_USE_DUPLICATE_SCAN)
     /* Remove the link id from exceptional list */
-    bt_mesh_update_exceptional_list(BT_MESH_EXCEP_LIST_REMOVE,
-        BT_MESH_EXCEP_INFO_MESH_LINK_ID, &link[i].link_id);
+    bt_mesh_update_exceptional_list(BLE_MESH_EXCEP_LIST_REMOVE,
+        BLE_MESH_EXCEP_INFO_MESH_LINK_ID, &link[i].link_id);
 #endif
 
     /* Clear everything except the retransmit delayed work config */
@@ -1090,7 +1089,7 @@ static void reset_link(int i, u8_t reason)
     link[i].rx.prev_id  = XACT_NVAL;
 
     if (bt_mesh_pub_key_get()) {
-        atomic_set_bit(link[i].flags, LOCAL_PUB_KEY);
+        bt_mesh_atomic_set_bit(link[i].flags, LOCAL_PUB_KEY);
     }
 
     link[i].rx.buf = bt_mesh_pba_get_buf(i);
@@ -1104,7 +1103,7 @@ static struct net_buf *adv_buf_create(void)
 {
     struct net_buf *buf;
 
-    buf = bt_mesh_adv_create(BT_MESH_ADV_PROV, PROV_XMIT_COUNT,
+    buf = bt_mesh_adv_create(BLE_MESH_ADV_PROV, PROV_XMIT_COUNT,
                              PROV_XMIT_INT, BUF_TIMEOUT);
     if (!buf) {
         BT_ERR("Out of provisioning buffers");
@@ -1224,29 +1223,29 @@ static void send_link_open(void)
      */
     bt_mesh_rand(&link[i].link_id, sizeof(u32_t));
     while (1) {
-        for (j = 0; j < CONFIG_BT_MESH_PBA_SAME_TIME; j++) {
-            if (atomic_test_bit(link[j].flags, LINK_ACTIVE) || link[j].linking) {
+        for (j = 0; j < CONFIG_BLE_MESH_PBA_SAME_TIME; j++) {
+            if (bt_mesh_atomic_test_bit(link[j].flags, LINK_ACTIVE) || link[j].linking) {
                 if (link[i].link_id == link[j].link_id) {
                     bt_mesh_rand(&link[i].link_id, sizeof(u32_t));
                     break;
                 }
             }
         }
-        if (j == CONFIG_BT_MESH_PBA_SAME_TIME) {
+        if (j == CONFIG_BLE_MESH_PBA_SAME_TIME) {
             break;
         }
     }
 
-#if defined(CONFIG_BT_MESH_USE_DUPLICATE_SCAN)
+#if defined(CONFIG_BLE_MESH_USE_DUPLICATE_SCAN)
     /* Add the link id into exceptional list */
-    bt_mesh_update_exceptional_list(BT_MESH_EXCEP_LIST_ADD,
-        BT_MESH_EXCEP_INFO_MESH_LINK_ID, &link[i].link_id);
+    bt_mesh_update_exceptional_list(BLE_MESH_EXCEP_LIST_ADD,
+        BLE_MESH_EXCEP_INFO_MESH_LINK_ID, &link[i].link_id);
 #endif
 
     bearer_ctl_send(i, LINK_OPEN, link[i].uuid, 16);
 
     /* Set LINK_ACTIVE just to be in compatibility with  current Zephyr code */
-    atomic_set_bit(link[i].flags, LINK_ACTIVE);
+    bt_mesh_atomic_set_bit(link[i].flags, LINK_ACTIVE);
 
     prov_ctx.pba_count++;
 }
@@ -1299,7 +1298,7 @@ static int prov_send_adv(struct net_buf_simple *msg)
 
     link[i].tx.buf[0] = start;
 
-    seg_len = min(msg->len, START_PAYLOAD_MAX);
+    seg_len = MIN(msg->len, START_PAYLOAD_MAX);
     BT_DBG("seg 0 len %u: %s", seg_len, bt_hex(msg->data, seg_len));
     net_buf_add_mem(start, msg->data, seg_len);
     net_buf_simple_pull(msg, seg_len);
@@ -1320,7 +1319,7 @@ static int prov_send_adv(struct net_buf_simple *msg)
 
         link[i].tx.buf[seg_id] = buf;
 
-        seg_len = min(msg->len, CONT_PAYLOAD_MAX);
+        seg_len = MIN(msg->len, CONT_PAYLOAD_MAX);
 
         BT_DBG("seg_id %u len %u: %s", seg_id, seg_len,
                bt_hex(msg->data, seg_len));
@@ -1334,15 +1333,15 @@ static int prov_send_adv(struct net_buf_simple *msg)
 
     send_reliable(i);
 
-    if (!atomic_test_and_set_bit(link[i].flags, TIMEOUT_START)) {
+    if (!bt_mesh_atomic_test_and_set_bit(link[i].flags, TIMEOUT_START)) {
         k_delayed_work_submit(&link[i].timeout, PROVISION_TIMEOUT);
     }
 
     return 0;
 }
-#endif /* CONFIG_BT_MESH_PB_ADV */
+#endif /* CONFIG_BLE_MESH_PB_ADV */
 
-#if defined(CONFIG_BT_MESH_PB_GATT)
+#if defined(CONFIG_BLE_MESH_PB_GATT)
 static int prov_send_gatt(struct net_buf_simple *msg)
 {
     int i = prov_get_pb_index();
@@ -1352,33 +1351,33 @@ static int prov_send_gatt(struct net_buf_simple *msg)
         return -ENOTCONN;
     }
 
-    err = provisioner_proxy_send(link[i].conn, BT_MESH_PROXY_PROV, msg);
+    err = provisioner_proxy_send(link[i].conn, BLE_MESH_PROXY_PROV, msg);
     if (err) {
         BT_ERR("%s, Failed to send PB-GATT pdu", __func__);
         return err;
     }
 
-    if (!atomic_test_and_set_bit(link[i].flags, TIMEOUT_START)) {
+    if (!bt_mesh_atomic_test_and_set_bit(link[i].flags, TIMEOUT_START)) {
         k_delayed_work_submit(&link[i].timeout, PROVISION_TIMEOUT);
     }
 
     return 0;
 }
-#endif /* CONFIG_BT_MESH_PB_GATT */
+#endif /* CONFIG_BLE_MESH_PB_GATT */
 
 static inline int prov_send(struct net_buf_simple *buf)
 {
     int i = prov_get_pb_index();
 
-    if (i < CONFIG_BT_MESH_PBA_SAME_TIME) {
-#if defined(CONFIG_BT_MESH_PB_ADV)
+    if (i < CONFIG_BLE_MESH_PBA_SAME_TIME) {
+#if defined(CONFIG_BLE_MESH_PB_ADV)
         return prov_send_adv(buf);
 #else
         return -EINVAL;
 #endif
-    } else if (i >= CONFIG_BT_MESH_PBA_SAME_TIME &&
-               i < BT_MESH_PROV_SAME_TIME) {
-#if defined(CONFIG_BT_MESH_PB_GATT)
+    } else if (i >= CONFIG_BLE_MESH_PBA_SAME_TIME &&
+               i < BLE_MESH_PROV_SAME_TIME) {
+#if defined(CONFIG_BLE_MESH_PB_GATT)
         return prov_send_gatt(buf);
 #else
         return -EINVAL;
@@ -1508,7 +1507,7 @@ static void prov_capabilities(const u8_t *data)
     }
 
     /* Make sure received pdu is ok and cancel the timeout timer */
-    if (atomic_test_and_clear_bit(link[i].flags, TIMEOUT_START)) {
+    if (bt_mesh_atomic_test_and_clear_bit(link[i].flags, TIMEOUT_START)) {
         k_delayed_work_cancel(&link[i].timeout);
     }
 
@@ -1576,12 +1575,12 @@ static void prov_capabilities(const u8_t *data)
     /** If using PB-ADV, need to listen for transaction ack,
      *  after ack is received, provisioner can send public key.
      */
-#if defined(CONFIG_BT_MESH_PB_ADV)
-    if (i < CONFIG_BT_MESH_PBA_SAME_TIME) {
+#if defined(CONFIG_BLE_MESH_PB_ADV)
+    if (i < CONFIG_BLE_MESH_PBA_SAME_TIME) {
         link[i].expect_ack_for = PROV_START;
         return;
     }
-#endif /* CONFIG_BT_MESH_PB_ADV */
+#endif /* CONFIG_BLE_MESH_PB_ADV */
 
     send_pub_key(pub_key_oob);
     return;
@@ -1595,17 +1594,17 @@ static bt_mesh_output_action_t output_action(u8_t action)
 {
     switch (action) {
     case OUTPUT_OOB_BLINK:
-        return BT_MESH_BLINK;
+        return BLE_MESH_BLINK;
     case OUTPUT_OOB_BEEP:
-        return BT_MESH_BEEP;
+        return BLE_MESH_BEEP;
     case OUTPUT_OOB_VIBRATE:
-        return BT_MESH_VIBRATE;
+        return BLE_MESH_VIBRATE;
     case OUTPUT_OOB_NUMBER:
-        return BT_MESH_DISPLAY_NUMBER;
+        return BLE_MESH_DISPLAY_NUMBER;
     case OUTPUT_OOB_STRING:
-        return BT_MESH_DISPLAY_STRING;
+        return BLE_MESH_DISPLAY_STRING;
     default:
-        return BT_MESH_NO_OUTPUT;
+        return BLE_MESH_NO_OUTPUT;
     }
 }
 
@@ -1613,15 +1612,15 @@ static bt_mesh_input_action_t input_action(u8_t action)
 {
     switch (action) {
     case INPUT_OOB_PUSH:
-        return BT_MESH_PUSH;
+        return BLE_MESH_PUSH;
     case INPUT_OOB_TWIST:
-        return BT_MESH_TWIST;
+        return BLE_MESH_TWIST;
     case INPUT_OOB_NUMBER:
-        return BT_MESH_ENTER_NUMBER;
+        return BLE_MESH_ENTER_NUMBER;
     case INPUT_OOB_STRING:
-        return BT_MESH_ENTER_STRING;
+        return BLE_MESH_ENTER_STRING;
     default:
-        return BT_MESH_NO_INPUT;
+        return BLE_MESH_NO_INPUT;
     }
 }
 
@@ -1673,7 +1672,7 @@ static int prov_auth(u8_t method, u8_t action, u8_t size)
         /* Provisioner ouputs number/string and wait for device's Provisioning Input Complete PDU */
         link[i].expect = PROV_INPUT_COMPLETE;
 
-        if (input == BT_MESH_ENTER_STRING) {
+        if (input == BLE_MESH_ENTER_STRING) {
             unsigned char str[9];
             u8_t j;
 
@@ -1859,9 +1858,9 @@ int bt_mesh_prov_read_oob_pub_key(u8_t link_idx, u8_t pub_key_x[32], u8_t pub_ke
     sys_memcpy_swap(&link[link_idx].conf_inputs[81], pub_key_x, 32);
     sys_memcpy_swap(&link[link_idx].conf_inputs[81] + 32, pub_key_y, 32);
 
-    atomic_set_bit(link[link_idx].flags, REMOTE_PUB_KEY);
+    bt_mesh_atomic_set_bit(link[link_idx].flags, REMOTE_PUB_KEY);
 
-    if (atomic_test_and_clear_bit(link[link_idx].flags, WAIT_GEN_DHKEY)) {
+    if (bt_mesh_atomic_test_and_clear_bit(link[link_idx].flags, WAIT_GEN_DHKEY)) {
         prov_gen_dh_key(link_idx);
     }
 
@@ -1888,7 +1887,7 @@ static void prov_dh_key_cb(const u8_t key[32])
 
     BT_DBG("DHkey: %s", bt_hex(link[i].dhkey, 32));
 
-    atomic_set_bit(link[i].flags, HAVE_DHKEY);
+    bt_mesh_atomic_set_bit(link[i].flags, HAVE_DHKEY);
 
     /** After dhkey is generated, if auth_method is No OOB or
      *  Static OOB, provisioner can start to send confirmation.
@@ -1949,7 +1948,7 @@ static void send_pub_key(u8_t oob)
 
     BT_DBG("Local Public Key: %s", bt_hex(key, 64));
 
-    atomic_set_bit(link[i].flags, LOCAL_PUB_KEY);
+    bt_mesh_atomic_set_bit(link[i].flags, LOCAL_PUB_KEY);
 
     prov_buf_init(buf, PROV_PUB_KEY);
 
@@ -1974,20 +1973,20 @@ static void send_pub_key(u8_t oob)
          *  wait for transactiona ack for public key then send
          *  provisioning confirm pdu.
          */
-#if defined(CONFIG_BT_MESH_PB_ADV)
-        if (i < CONFIG_BT_MESH_PBA_SAME_TIME) {
+#if defined(CONFIG_BLE_MESH_PB_ADV)
+        if (i < CONFIG_BLE_MESH_PBA_SAME_TIME) {
             link[i].expect_ack_for = PROV_PUB_KEY;
             return;
         }
-#endif /* CONFIG_BT_MESH_PB_ADV */
+#endif /* CONFIG_BLE_MESH_PB_ADV */
 
         /* If remote public key has been read, then start to generate DHkey,
          * otherwise wait for device oob public key.
          */
-        if (atomic_test_bit(link[i].flags, REMOTE_PUB_KEY)) {
+        if (bt_mesh_atomic_test_bit(link[i].flags, REMOTE_PUB_KEY)) {
             prov_gen_dh_key(i);
         } else {
-            atomic_set_bit(link[i].flags, WAIT_GEN_DHKEY);
+            bt_mesh_atomic_set_bit(link[i].flags, WAIT_GEN_DHKEY);
         }
     }
 }
@@ -1999,18 +1998,18 @@ static void prov_pub_key(const u8_t *data)
     BT_DBG("Remote Public Key: %s", bt_hex(data, 64));
 
     /* Make sure received pdu is ok and cancel the timeout timer */
-    if (atomic_test_and_clear_bit(link[i].flags, TIMEOUT_START)) {
+    if (bt_mesh_atomic_test_and_clear_bit(link[i].flags, TIMEOUT_START)) {
         k_delayed_work_cancel(&link[i].timeout);
     }
 
     memcpy(&link[i].conf_inputs[81], data, 64);
 
-    if (!atomic_test_bit(link[i].flags, LOCAL_PUB_KEY)) {
+    if (!bt_mesh_atomic_test_bit(link[i].flags, LOCAL_PUB_KEY)) {
         /* Clear retransmit timer */
-#if defined(CONFIG_BT_MESH_PB_ADV)
+#if defined(CONFIG_BLE_MESH_PB_ADV)
         prov_clear_tx(i);
 #endif
-        atomic_set_bit(link[i].flags, REMOTE_PUB_KEY);
+        bt_mesh_atomic_set_bit(link[i].flags, REMOTE_PUB_KEY);
         BT_WARN("%s, Waiting for local public key", __func__);
         return;
     }
@@ -2023,7 +2022,7 @@ static void prov_input_complete(const u8_t *data)
     int i = prov_get_pb_index();
 
     /* Make sure received pdu is ok and cancel the timeout timer */
-    if (atomic_test_and_clear_bit(link[i].flags, TIMEOUT_START)) {
+    if (bt_mesh_atomic_test_and_clear_bit(link[i].flags, TIMEOUT_START)) {
         k_delayed_work_cancel(&link[i].timeout);
     }
 
@@ -2043,7 +2042,7 @@ static void prov_confirm(const u8_t *data)
     BT_DBG("Remote Confirm: %s", bt_hex(data, 16));
 
     /* Make sure received pdu is ok and cancel the timeout timer */
-    if (atomic_test_and_clear_bit(link[i].flags, TIMEOUT_START)) {
+    if (bt_mesh_atomic_test_and_clear_bit(link[i].flags, TIMEOUT_START)) {
         k_delayed_work_cancel(&link[i].timeout);
     }
 
@@ -2056,11 +2055,11 @@ static void prov_confirm(const u8_t *data)
 
     memcpy(link[i].conf, data, 16);
 
-    if (!atomic_test_bit(link[i].flags, HAVE_DHKEY)) {
-#if defined(CONFIG_BT_MESH_PB_ADV)
+    if (!bt_mesh_atomic_test_bit(link[i].flags, HAVE_DHKEY)) {
+#if defined(CONFIG_BLE_MESH_PB_ADV)
         prov_clear_tx(i);
 #endif
-        atomic_set_bit(link[i].flags, SEND_CONFIRM);
+        bt_mesh_atomic_set_bit(link[i].flags, SEND_CONFIRM);
     }
 
     prov_buf_init(buf, PROV_RANDOM);
@@ -2142,7 +2141,7 @@ static void send_prov_data(void)
      */
 
     /* Check if this device is a re-provisioned device */
-    for (j = 0; j < BT_MESH_ALREADY_PROV_NUM; j++) {
+    for (j = 0; j < BLE_MESH_ALREADY_PROV_NUM; j++) {
         if (!memcmp(link[i].uuid, prov_ctx.already_prov[j].uuid, 16)) {
             if (link[i].element_num <= prov_ctx.already_prov[j].element_num) {
                 already_flag = true;
@@ -2198,7 +2197,7 @@ static void send_prov_data(void)
      * sent successfully, update the current_addr in prov_ctx struct.
      */
     if (!already_flag) {
-        for (j = 0; j < BT_MESH_ALREADY_PROV_NUM; j++) {
+        for (j = 0; j < BLE_MESH_ALREADY_PROV_NUM; j++) {
             if (!prov_ctx.already_prov[j].element_num) {
                 memcpy(prov_ctx.already_prov[j].uuid, link[i].uuid, 16);
                 prov_ctx.already_prov[j].element_num  = link[i].element_num;
@@ -2256,7 +2255,7 @@ static void prov_random(const u8_t *data)
     }
 
     /*Verify received confirm is ok and cancel the timeout timer */
-    if (atomic_test_and_clear_bit(link[i].flags, TIMEOUT_START)) {
+    if (bt_mesh_atomic_test_and_clear_bit(link[i].flags, TIMEOUT_START)) {
         k_delayed_work_cancel(&link[i].timeout);
     }
 
@@ -2296,7 +2295,7 @@ static void prov_complete(const u8_t *data)
     int err, rm = 0;
 
     /* Make sure received pdu is ok and cancel the timeout timer */
-    if (atomic_test_and_clear_bit(link[i].flags, TIMEOUT_START)) {
+    if (bt_mesh_atomic_test_and_clear_bit(link[i].flags, TIMEOUT_START)) {
         k_delayed_work_cancel(&link[i].timeout);
     }
 
@@ -2325,7 +2324,7 @@ static void prov_complete(const u8_t *data)
             prov_nodes[j].flags = link[i].ki_flags;
             prov_nodes[j].iv_index = link[i].iv_index;
             prov_nodes[j].addr.type = link[i].addr.type;
-            memcpy(prov_nodes[j].addr.a.val, link[i].addr.a.val, BD_ADDR_LEN);
+            memcpy(prov_nodes[j].addr.val, link[i].addr.val, BLE_MESH_ADDR_LEN);
             memcpy(prov_nodes[j].uuid, link[i].uuid, 16);
             break;
         }
@@ -2395,13 +2394,13 @@ static const struct {
 
 static void close_link(int i, u8_t reason)
 {
-    if (i < CONFIG_BT_MESH_PBA_SAME_TIME) {
-#if defined(CONFIG_BT_MESH_PB_ADV)
+    if (i < CONFIG_BLE_MESH_PBA_SAME_TIME) {
+#if defined(CONFIG_BLE_MESH_PB_ADV)
         bearer_ctl_send(i, LINK_CLOSE, &reason, sizeof(reason));
 #endif
-    } else if (i >= CONFIG_BT_MESH_PBA_SAME_TIME &&
-               i < BT_MESH_PROV_SAME_TIME) {
-#if defined(CONFIG_BT_MESH_PB_GATT)
+    } else if (i >= CONFIG_BLE_MESH_PBA_SAME_TIME &&
+               i < BLE_MESH_PROV_SAME_TIME) {
+#if defined(CONFIG_BLE_MESH_PB_GATT)
         if (link[i].conn) {
             bt_mesh_gattc_disconnect(link[i].conn);
         }
@@ -2420,14 +2419,14 @@ static void prov_timeout(struct k_work *work)
     close_link(i, CLOSE_REASON_TIMEOUT);
 }
 
-#if defined(CONFIG_BT_MESH_PB_ADV)
+#if defined(CONFIG_BLE_MESH_PB_ADV)
 static void prov_retransmit(struct k_work *work)
 {
     int id = work->index;
 
     BT_DBG("%s", __func__);
 
-    if (!atomic_test_bit(link[id].flags, LINK_ACTIVE)) {
+    if (!bt_mesh_atomic_test_bit(link[id].flags, LINK_ACTIVE)) {
         BT_WARN("%s, Link is not active", __func__);
         return;
     }
@@ -2453,7 +2452,7 @@ static void prov_retransmit(struct k_work *work)
             break;
         }
 
-        if (BT_MESH_ADV(buf)->busy) {
+        if (BLE_MESH_ADV(buf)->busy) {
             continue;
         }
 
@@ -2521,14 +2520,14 @@ static void gen_prov_ctl(struct prov_rx *rx, struct net_buf_simple *buf)
         break;
 
     case LINK_ACK:
-        if (!atomic_test_bit(link[i].flags, LINK_ACTIVE)) {
+        if (!bt_mesh_atomic_test_bit(link[i].flags, LINK_ACTIVE)) {
             return;
         }
         link_ack(rx, buf);
         break;
 
     case LINK_CLOSE:
-        if (!atomic_test_bit(link[i].flags, LINK_ACTIVE)) {
+        if (!bt_mesh_atomic_test_bit(link[i].flags, LINK_ACTIVE)) {
             return;
         }
         link_close(rx, buf);
@@ -2749,7 +2748,7 @@ static void gen_prov_recv(struct prov_rx *rx, struct net_buf_simple *buf)
      *  And if so, we shall not check LINK_ACTIVE status in the
      *  function find_link().
      */
-    if (!atomic_test_bit(link[i].flags, LINK_ACTIVE) &&
+    if (!bt_mesh_atomic_test_bit(link[i].flags, LINK_ACTIVE) &&
             gen_prov[GPCF(rx->gpc)].require_link) {
         BT_DBG("Ignoring message that requires active link");
         return;
@@ -2762,9 +2761,9 @@ static int find_link(u32_t link_id, bool set)
 {
     int i;
 
-    /* link for PB-ADV is from 0 to CONFIG_BT_MESH_PBA_SAME_TIME */
-    for (i = 0; i < CONFIG_BT_MESH_PBA_SAME_TIME; i++) {
-        if (atomic_test_bit(link[i].flags, LINK_ACTIVE)) {
+    /* link for PB-ADV is from 0 to CONFIG_BLE_MESH_PBA_SAME_TIME */
+    for (i = 0; i < CONFIG_BLE_MESH_PBA_SAME_TIME; i++) {
+        if (bt_mesh_atomic_test_bit(link[i].flags, LINK_ACTIVE)) {
             if (link[i].link_id == link_id) {
                 if (set) {
                     prov_set_pb_index(i);
@@ -2803,16 +2802,16 @@ void provisioner_pb_adv_recv(struct net_buf_simple *buf)
 
     gen_prov_recv(&rx, buf);
 }
-#endif /* CONFIG_BT_MESH_PB_ADV */
+#endif /* CONFIG_BLE_MESH_PB_ADV */
 
-#if defined(CONFIG_BT_MESH_PB_GATT)
-static struct bt_conn *find_conn(struct bt_conn *conn, bool set)
+#if defined(CONFIG_BLE_MESH_PB_GATT)
+static struct bt_mesh_conn *find_conn(struct bt_mesh_conn *conn, bool set)
 {
     int i;
 
-    /* link for PB-GATT is from CONFIG_BT_MESH_PBA_SAME_TIME to BT_MESH_PROV_SAME_TIME */
-    for (i = CONFIG_BT_MESH_PBA_SAME_TIME; i < BT_MESH_PROV_SAME_TIME; i++) {
-        if (atomic_test_bit(link[i].flags, LINK_ACTIVE)) {
+    /* link for PB-GATT is from CONFIG_BLE_MESH_PBA_SAME_TIME to BLE_MESH_PROV_SAME_TIME */
+    for (i = CONFIG_BLE_MESH_PBA_SAME_TIME; i < BLE_MESH_PROV_SAME_TIME; i++) {
+        if (bt_mesh_atomic_test_bit(link[i].flags, LINK_ACTIVE)) {
             if (link[i].conn == conn) {
                 if (set) {
                     prov_set_pb_index(i);
@@ -2825,7 +2824,7 @@ static struct bt_conn *find_conn(struct bt_conn *conn, bool set)
     return NULL;
 }
 
-int provisioner_pb_gatt_recv(struct bt_conn *conn, struct net_buf_simple *buf)
+int provisioner_pb_gatt_recv(struct bt_mesh_conn *conn, struct net_buf_simple *buf)
 {
     u8_t type;
     int i;
@@ -2870,25 +2869,25 @@ fail:
     return -EINVAL;
 }
 
-int provisioner_set_prov_conn(const u8_t addr[6], struct bt_conn *conn)
+int provisioner_set_prov_conn(const u8_t addr[6], struct bt_mesh_conn *conn)
 {
     if (!addr || !conn) {
         BT_ERR("%s, Invalid parameter", __func__);
         return -EINVAL;
     }
 
-    for (int i = CONFIG_BT_MESH_PBA_SAME_TIME; i < BT_MESH_PROV_SAME_TIME; i++) {
-        if (!memcmp(link[i].addr.a.val, addr, BD_ADDR_LEN)) {
+    for (int i = CONFIG_BLE_MESH_PBA_SAME_TIME; i < BLE_MESH_PROV_SAME_TIME; i++) {
+        if (!memcmp(link[i].addr.val, addr, BLE_MESH_ADDR_LEN)) {
             link[i].conn = bt_mesh_conn_ref(conn);
             return 0;
         }
     }
 
-    BT_ERR("%s, Address %s is not found", __func__, bt_hex(addr, BD_ADDR_LEN));
+    BT_ERR("%s, Address %s is not found", __func__, bt_hex(addr, BLE_MESH_ADDR_LEN));
     return -ENOMEM;
 }
 
-int provisioner_pb_gatt_open(struct bt_conn *conn, u8_t *addr)
+int provisioner_pb_gatt_open(struct bt_mesh_conn *conn, u8_t *addr)
 {
     int i, id = 0;
 
@@ -2901,22 +2900,22 @@ int provisioner_pb_gatt_open(struct bt_conn *conn, u8_t *addr)
      *  procedures are completed, we just check if this conn already
      *  exists in the proxy servers array.
      */
-    for (i = CONFIG_BT_MESH_PBA_SAME_TIME; i < BT_MESH_PROV_SAME_TIME; i++) {
+    for (i = CONFIG_BLE_MESH_PBA_SAME_TIME; i < BLE_MESH_PROV_SAME_TIME; i++) {
         if (link[i].conn == conn) {
             id = i;
             break;
         }
     }
 
-    if (i == BT_MESH_PROV_SAME_TIME) {
+    if (i == BLE_MESH_PROV_SAME_TIME) {
         BT_ERR("%s, Link is not found", __func__);
         return -ENOTCONN;
     }
 
     prov_set_pb_index(id);
 
-    for (i = 0; i < CONFIG_BT_MESH_PBA_SAME_TIME; i++) {
-        if (atomic_test_bit(link[i].flags, LINK_ACTIVE)) {
+    for (i = 0; i < CONFIG_BLE_MESH_PBA_SAME_TIME; i++) {
+        if (bt_mesh_atomic_test_bit(link[i].flags, LINK_ACTIVE)) {
             if (!memcmp(link[i].uuid, link[id].uuid, 16)) {
                 BT_WARN("%s, Provision using PB-GATT & PB-ADV same time", __func__);
                 close_link(id, CLOSE_REASON_FAILED);
@@ -2925,12 +2924,12 @@ int provisioner_pb_gatt_open(struct bt_conn *conn, u8_t *addr)
         }
     }
 
-    atomic_set_bit(link[id].flags, LINK_ACTIVE);
+    bt_mesh_atomic_set_bit(link[id].flags, LINK_ACTIVE);
     link[id].conn = bt_mesh_conn_ref(conn);
 
     /* May use lcd to indicate starting provisioning each device */
     if (prov->prov_link_open) {
-        prov->prov_link_open(BT_MESH_PROV_GATT);
+        prov->prov_link_open(BLE_MESH_PROV_GATT);
     }
 
     link[id].conf_inputs = (u8_t *)osi_calloc(PROV_CONF_INPUTS_SIZE);
@@ -2946,7 +2945,7 @@ int provisioner_pb_gatt_open(struct bt_conn *conn, u8_t *addr)
     return 0;
 }
 
-int provisioner_pb_gatt_close(struct bt_conn *conn, u8_t reason)
+int provisioner_pb_gatt_close(struct bt_mesh_conn *conn, u8_t reason)
 {
     int i;
 
@@ -2959,12 +2958,12 @@ int provisioner_pb_gatt_close(struct bt_conn *conn, u8_t reason)
 
     i = prov_get_pb_index();
 
-    if (atomic_test_and_clear_bit(link[i].flags, TIMEOUT_START)) {
+    if (bt_mesh_atomic_test_and_clear_bit(link[i].flags, TIMEOUT_START)) {
         k_delayed_work_cancel(&link[i].timeout);
     }
 
     if (prov->prov_link_close) {
-        prov->prov_link_close(BT_MESH_PROV_GATT, reason);
+        prov->prov_link_close(BLE_MESH_PROV_GATT, reason);
     }
 
     prov_memory_free(i);
@@ -2972,12 +2971,12 @@ int provisioner_pb_gatt_close(struct bt_conn *conn, u8_t reason)
     memset(&link[i], 0, offsetof(struct prov_link, timeout));
 
     if (bt_mesh_pub_key_get()) {
-        atomic_set_bit(link[i].flags, LOCAL_PUB_KEY);
+        bt_mesh_atomic_set_bit(link[i].flags, LOCAL_PUB_KEY);
     }
 
     return 0;
 }
-#endif /* CONFIG_BT_MESH_PB_GATT */
+#endif /* CONFIG_BLE_MESH_PB_GATT */
 
 int provisioner_prov_init(const struct bt_mesh_prov *prov_info)
 {
@@ -2989,7 +2988,7 @@ int provisioner_prov_init(const struct bt_mesh_prov *prov_info)
         return -EINVAL;
     }
 
-    if (CONFIG_BT_MESH_PBG_SAME_TIME > CONFIG_BT_MAX_CONN) {
+    if (CONFIG_BLE_MESH_PBG_SAME_TIME > CONFIG_BT_MAX_CONN) {
         BT_ERR("%s, PB-GATT same time exceeds max connection", __func__);
         return -EINVAL;
     }
@@ -3002,8 +3001,8 @@ int provisioner_prov_init(const struct bt_mesh_prov *prov_info)
 
     prov = prov_info;
 
-#if defined(CONFIG_BT_MESH_PB_ADV)
-    for (i = 0; i < CONFIG_BT_MESH_PBA_SAME_TIME; i++) {
+#if defined(CONFIG_BLE_MESH_PB_ADV)
+    for (i = 0; i < CONFIG_BLE_MESH_PBA_SAME_TIME; i++) {
         adv_buf[i].buf.size = ADV_BUF_SIZE;
         link[i].pending_ack = XACT_NVAL;
         k_delayed_work_init(&link[i].tx.retransmit, prov_retransmit);
@@ -3013,7 +3012,7 @@ int provisioner_prov_init(const struct bt_mesh_prov *prov_info)
     }
 #endif
 
-    for (i = 0; i < BT_MESH_PROV_SAME_TIME; i++) {
+    for (i = 0; i < BLE_MESH_PROV_SAME_TIME; i++) {
         k_delayed_work_init(&link[i].timeout, prov_timeout);
         link[i].timeout.work.index = i;
     }
@@ -3021,7 +3020,7 @@ int provisioner_prov_init(const struct bt_mesh_prov *prov_info)
     /* for PB-GATT, use servers[] array in proxy_provisioner.c */
 
     prov_ctx.current_addr = prov->prov_start_address;
-    prov_ctx.curr_net_idx = BT_MESH_KEY_PRIMARY;
+    prov_ctx.curr_net_idx = BLE_MESH_KEY_PRIMARY;
     prov_ctx.curr_flags = prov->flags;
     prov_ctx.curr_iv_index = prov->iv_index;
 
@@ -3029,29 +3028,29 @@ int provisioner_prov_init(const struct bt_mesh_prov *prov_info)
 }
 
 static int provisioner_notify_unprov_adv_pkt(bt_mesh_prov_bearer_t bearer, const u8_t uuid[16],
-                const bt_addr_le_t *addr, u16_t oob_info)
+                const bt_mesh_addr_t *addr, u16_t oob_info)
 {
     u8_t adv_type;
     int index;
 
-    if ((bearer != BT_MESH_PROV_ADV && bearer != BT_MESH_PROV_GATT) || !uuid || !addr) {
+    if ((bearer != BLE_MESH_PROV_ADV && bearer != BLE_MESH_PROV_GATT) || !uuid || !addr) {
         BT_ERR("%s, invalid parameter", __func__);
         return -EINVAL;
     }
 
-    adv_type = (bearer == BT_MESH_PROV_ADV) ? BT_LE_ADV_NONCONN_IND : BT_LE_ADV_IND;
+    adv_type = (bearer == BLE_MESH_PROV_ADV) ? BLE_MESH_ADV_NONCONN_IND : BLE_MESH_ADV_IND;
 
     if (prov_ctx.prov_after_match == false) {
         if (provisioner_dev_find(addr, uuid, &index)) {
             BT_DBG("%s, Device is not found, notify to upper layer", __func__);
             if (notify_unprov_adv_pkt_cb) {
-                notify_unprov_adv_pkt_cb(addr->a.val, addr->type, adv_type, uuid, oob_info, bearer);
+                notify_unprov_adv_pkt_cb(addr->val, addr->type, adv_type, uuid, oob_info, bearer);
             }
             return -EALREADY;
         }
 
         if (!(unprov_dev[index].bearer & bearer)) {
-            BT_DBG("%s, Not support PB-%s", __func__, (bearer == BT_MESH_PROV_ADV) ? "ADV" : "GATT");
+            BT_DBG("%s, Not support PB-%s", __func__, (bearer == BLE_MESH_PROV_ADV) ? "ADV" : "GATT");
             return -EIO;
         }
     }
@@ -3061,8 +3060,8 @@ static int provisioner_notify_unprov_adv_pkt(bt_mesh_prov_bearer_t bearer, const
 
 void provisioner_unprov_beacon_recv(struct net_buf_simple *buf)
 {
-#if defined(CONFIG_BT_MESH_PB_ADV)
-    const bt_addr_le_t *addr = NULL;
+#if defined(CONFIG_BLE_MESH_PB_ADV)
+    const bt_mesh_addr_t *addr = NULL;
     u8_t *uuid = NULL;
     u16_t oob_info;
 
@@ -3071,7 +3070,7 @@ void provisioner_unprov_beacon_recv(struct net_buf_simple *buf)
         return;
     }
 
-    if (prov_ctx.pba_count == CONFIG_BT_MESH_PBA_SAME_TIME) {
+    if (prov_ctx.pba_count == CONFIG_BLE_MESH_PBA_SAME_TIME) {
         BT_DBG("Current PB-ADV devices reach max limit");
         return;
     }
@@ -3087,12 +3086,12 @@ void provisioner_unprov_beacon_recv(struct net_buf_simple *buf)
     }
 
     if (provisioner_notify_unprov_adv_pkt(
-            BT_MESH_PROV_ADV, uuid, addr, oob_info)) {
+            BLE_MESH_PROV_ADV, uuid, addr, oob_info)) {
         return;
     }
 
-    provisioner_start_prov_device(BT_MESH_PROV_ADV, uuid, addr, oob_info);
-#endif /* CONFIG_BT_MESH_PB_ADV */
+    provisioner_start_prov_device(BLE_MESH_PROV_ADV, uuid, addr, oob_info);
+#endif /* CONFIG_BLE_MESH_PB_ADV */
 }
 
 bool provisioner_flags_match(struct net_buf_simple *buf)
@@ -3126,16 +3125,16 @@ u16_t provisioner_srv_uuid_recv(struct net_buf_simple *buf)
 
     BT_DBG("Received adv pkt with service UUID: %d", uuid);
 
-    if ((uuid != BT_UUID_MESH_PROV_VAL) && (uuid != BT_UUID_MESH_PROXY_VAL)) {
+    if ((uuid != BLE_MESH_UUID_MESH_PROV_VAL) && (uuid != BLE_MESH_UUID_MESH_PROXY_VAL)) {
         return false;
     }
 
     return uuid;
 }
 
-static void provisioner_prov_srv_data_recv(struct net_buf_simple *buf, const bt_addr_le_t *addr);
+static void provisioner_prov_srv_data_recv(struct net_buf_simple *buf, const bt_mesh_addr_t *addr);
 
-void provisioner_srv_data_recv(struct net_buf_simple *buf, const bt_addr_le_t *addr, u16_t uuid)
+void provisioner_srv_data_recv(struct net_buf_simple *buf, const bt_mesh_addr_t *addr, u16_t uuid)
 {
     u16_t uuid_type;
 
@@ -3151,17 +3150,17 @@ void provisioner_srv_data_recv(struct net_buf_simple *buf, const bt_addr_le_t *a
     }
 
     switch (uuid) {
-    case BT_UUID_MESH_PROV_VAL:
-        if (buf->len != BT_MESH_PROV_SRV_DATA_LEN) {
+    case BLE_MESH_UUID_MESH_PROV_VAL:
+        if (buf->len != BLE_MESH_PROV_SRV_DATA_LEN) {
             BT_WARN("%s, Invalid Mesh Prov Service Data length %d", __func__, buf->len);
             return;
         }
         BT_DBG("Start to deal with Mesh Prov Service Data");
         provisioner_prov_srv_data_recv(buf, addr);
         break;
-    case BT_UUID_MESH_PROXY_VAL:
-        if (buf->len != BT_MESH_PROXY_SRV_DATA_LEN1 &&
-                buf->len != BT_MESH_PROXY_SRV_DATA_LEN2) {
+    case BLE_MESH_UUID_MESH_PROXY_VAL:
+        if (buf->len != BLE_MESH_PROXY_SRV_DATA_LEN1 &&
+                buf->len != BLE_MESH_PROXY_SRV_DATA_LEN2) {
             BT_ERR("%s, Invalid Mesh Proxy Service Data length %d", __func__, buf->len);
             return;
         }
@@ -3173,13 +3172,13 @@ void provisioner_srv_data_recv(struct net_buf_simple *buf, const bt_addr_le_t *a
     }
 }
 
-static void provisioner_prov_srv_data_recv(struct net_buf_simple *buf, const bt_addr_le_t *addr)
+static void provisioner_prov_srv_data_recv(struct net_buf_simple *buf, const bt_mesh_addr_t *addr)
 {
-#if defined(CONFIG_BT_MESH_PB_GATT)
+#if defined(CONFIG_BLE_MESH_PB_GATT)
     u8_t *uuid = NULL;
     u16_t oob_info;
 
-    if (prov_ctx.pbg_count == CONFIG_BT_MESH_PBG_SAME_TIME) {
+    if (prov_ctx.pbg_count == CONFIG_BLE_MESH_PBG_SAME_TIME) {
         BT_DBG("Current PB-GATT devices reach max limit");
         return;
     }
@@ -3194,7 +3193,7 @@ static void provisioner_prov_srv_data_recv(struct net_buf_simple *buf, const bt_
     }
 
     if (provisioner_notify_unprov_adv_pkt(
-            BT_MESH_PROV_GATT, uuid, addr, oob_info)) {
+            BLE_MESH_PROV_GATT, uuid, addr, oob_info)) {
         return;
     }
 
@@ -3210,10 +3209,8 @@ static void provisioner_prov_srv_data_recv(struct net_buf_simple *buf, const bt_
      * Use connecting flag to prevent if two devices's adv pkts are both received,
      * the previous one info will be replaced by the second one.
      */
-    provisioner_start_prov_device(BT_MESH_PROV_GATT, uuid, addr, oob_info);
-#endif /* CONFIG_BT_MESH_PB_GATT */
+    provisioner_start_prov_device(BLE_MESH_PROV_GATT, uuid, addr, oob_info);
+#endif /* CONFIG_BLE_MESH_PB_GATT */
 }
 
-#endif /* CONFIG_BT_MESH_PROVISIONER */
-
-#endif /* CONFIG_BT_MESH */
+#endif /* CONFIG_BLE_MESH_PROVISIONER */

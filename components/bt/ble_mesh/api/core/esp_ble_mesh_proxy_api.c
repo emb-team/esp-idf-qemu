@@ -12,29 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <string.h>
-#include <errno.h>
+#include <stdint.h>
 
 #include "btc/btc_task.h"
 #include "btc/btc_manage.h"
-#include "osi/allocator.h"
 
-#include "esp_bt_defs.h"
 #include "esp_err.h"
+#include "esp_bt_defs.h"
 #include "esp_bt_main.h"
-#include "sdkconfig.h"
 
 #include "btc_ble_mesh_prov.h"
-
-#include "mesh.h"
-#include "mesh_buf.h"
-#include "transport.h"
-
-#if CONFIG_BT_MESH
+#include "esp_ble_mesh_defs.h"
 
 esp_err_t esp_ble_mesh_proxy_identity_enable(void)
 {
-    btc_msg_t msg;
+    btc_msg_t msg = {0};
 
     ESP_BLUEDROID_STATUS_CHECK(ESP_BLUEDROID_STATUS_ENABLED);
 
@@ -47,7 +39,7 @@ esp_err_t esp_ble_mesh_proxy_identity_enable(void)
 
 esp_err_t esp_ble_mesh_proxy_gatt_enable(void)
 {
-    btc_msg_t msg;
+    btc_msg_t msg = {0};
 
     ESP_BLUEDROID_STATUS_CHECK(ESP_BLUEDROID_STATUS_ENABLED);
 
@@ -60,7 +52,7 @@ esp_err_t esp_ble_mesh_proxy_gatt_enable(void)
 
 esp_err_t esp_ble_mesh_proxy_gatt_disable(void)
 {
-    btc_msg_t msg;
+    btc_msg_t msg = {0};
 
     ESP_BLUEDROID_STATUS_CHECK(ESP_BLUEDROID_STATUS_ENABLED);
 
@@ -70,6 +62,4 @@ esp_err_t esp_ble_mesh_proxy_gatt_disable(void)
 
     return (btc_transfer_context(&msg, NULL, 0, NULL) == BT_STATUS_SUCCESS ? ESP_OK : ESP_FAIL);
 }
-
-#endif /* #if CONFIG_BT_MESH */
 

@@ -7,8 +7,8 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-#ifndef __BT_MESH_HEALTH_SRV_H
-#define __BT_MESH_HEALTH_SRV_H
+#ifndef _BLE_MESH_HEALTH_SRV_H_
+#define _BLE_MESH_HEALTH_SRV_H_
 
 #include "mesh_access.h"
 #include "mesh_kernel.h"
@@ -45,7 +45,7 @@ struct bt_mesh_health_srv_cb {
     void (*attn_off)(struct bt_mesh_model *model);
 };
 
-/** @def BT_MESH_HEALTH_FAULT_MSG
+/** @def BLE_MESH_HEALTH_FAULT_MSG
  *
  *  A helper to define a health fault message.
  *
@@ -53,8 +53,8 @@ struct bt_mesh_health_srv_cb {
  *
  *  @return a New net_buf_simple of the needed size.
  */
-#define BT_MESH_HEALTH_FAULT_MSG(max_faults) \
-    NET_BUF_SIMPLE(1 + 3 + (max_faults))
+#define BLE_MESH_HEALTH_FAULT_MSG(max_faults)   \
+        NET_BUF_SIMPLE(1 + 3 + (max_faults))
 
 /** Mesh Health Server Model Context */
 struct bt_mesh_health_srv {
@@ -67,11 +67,9 @@ struct bt_mesh_health_srv {
     struct k_delayed_work attn_timer;
 };
 
-int bt_mesh_fault_update(struct bt_mesh_elem *elem);
-
 extern const struct bt_mesh_model_op bt_mesh_health_srv_op[];
 
-/** @def BT_MESH_MODEL_HEALTH_SRV
+/** @def BLE_MESH_MODEL_HEALTH_SRV
  *
  *  Define a new health server model. Note that this API needs to be
  *  repeated for each element which the application wants to have a
@@ -83,12 +81,14 @@ extern const struct bt_mesh_model_op bt_mesh_health_srv_op[];
  *
  *  @return New mesh model instance.
  */
-#define BT_MESH_MODEL_HEALTH_SRV(srv, pub)                                   \
-        BT_MESH_MODEL(BT_MESH_MODEL_ID_HEALTH_SRV,                   \
-                  bt_mesh_health_srv_op, pub, srv)
+#define BLE_MESH_MODEL_HEALTH_SRV(srv, pub)             \
+        BLE_MESH_MODEL(BLE_MESH_MODEL_ID_HEALTH_SRV,    \
+            bt_mesh_health_srv_op, pub, srv)
+
+int bt_mesh_fault_update(struct bt_mesh_elem *elem);
 
 /**
  * @}
  */
 
-#endif /* __BT_MESH_HEALTH_SRV_H */
+#endif /* __BLE_MESH_HEALTH_SRV_H */

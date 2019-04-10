@@ -9,30 +9,28 @@
 
 #include <errno.h>
 #include <string.h>
+
+#include "sdkconfig.h"
+#define BT_DBG_ENABLED IS_ENABLED(CONFIG_BLE_MESH_DEBUG_TRANS)
+
 #include "mesh_types.h"
 #include "mesh_util.h"
-
 #include "mesh_buf.h"
-#include "sdkconfig.h"
-#include "settings.h"
-
-#if CONFIG_BT_MESH
-
-#define BT_DBG_ENABLED IS_ENABLED(CONFIG_BT_MESH_DEBUG_TRANS)
 #include "mesh_trace.h"
 #include "mesh_main.h"
+#include "settings.h"
 
+#include "mesh.h"
 #include "crypto.h"
 #include "adv.h"
-#include "mesh.h"
 #include "net.h"
 #include "lpn.h"
 #include "friend.h"
 #include "access.h"
 #include "foundation.h"
 #include "transport.h"
-
-#include "common.h"
+#include "model_common.h"
+#include "provisioner_main.h"
 
 #define AID_MASK                    ((u8_t)(BIT_MASK(6)))
 
@@ -61,7 +59,7 @@
 
 static struct seg_tx {
     struct bt_mesh_subnet   *sub;
-    struct net_buf          *seg[BT_MESH_TX_SEG_COUNT];
+    struct net_buf          *seg[BLE_MESH_TX_SEG_COUNT];
     u64_t                    seq_auth;
     u16_t                    dst;
     u8_t                     seg_n: 5,      /* Last segment index */
@@ -70,7 +68,7 @@ static struct seg_tx {
     const struct bt_mesh_send_cb *cb;
     void                    *cb_data;
     struct k_delayed_work    retransmit;    /* Retransmit timer */
-} seg_tx[CONFIG_BT_MESH_TX_SEG_MSG_COUNT];
+} seg_tx[CONFIG_BLE_MESH_TX_SEG_MSG_COUNT];
 
 static struct seg_rx {
     struct bt_mesh_subnet   *sub;
@@ -87,14 +85,14 @@ static struct seg_rx {
     u32_t                    last;
     struct k_delayed_work    ack;
     struct net_buf_simple    buf;
-    u8_t                     buf_data[CONFIG_BT_MESH_RX_SDU_MAX];
-} seg_rx[CONFIG_BT_MESH_RX_SEG_MSG_COUNT] = {
-    [0 ... (CONFIG_BT_MESH_RX_SEG_MSG_COUNT - 1)] = {
-        .buf.size = CONFIG_BT_MESH_RX_SDU_MAX,
+    u8_t                     buf_data[CONFIG_BLE_MESH_RX_SDU_MAX];
+} seg_rx[CONFIG_BLE_MESH_RX_SEG_MSG_COUNT] = {
+    [0 ... (CONFIG_BLE_MESH_RX_SEG_MSG_COUNT - 1)] = {
+        .buf.size = CONFIG_BLE_MESH_RX_SDU_MAX,
     },
 };
 
-static u16_t hb_sub_dst = BT_MESH_ADDR_UNASSIGNED;
+static u16_t hb_sub_dst = BLE_MESH_ADDR_UNASSIGNED;
 
 void bt_mesh_set_hb_sub_dst(u16_t addr)
 {
@@ -109,17 +107,17 @@ static int send_unseg(struct bt_mesh_net_tx *tx, struct net_buf_simple *sdu,
     BT_DBG("src 0x%04x dst 0x%04x app_idx 0x%04x sdu_len %u",
            tx->src, tx->ctx->addr, tx->ctx->app_idx, sdu->len);
 
-    buf = bt_mesh_adv_create(BT_MESH_ADV_DATA,
-                             BT_MESH_TRANSMIT_COUNT(tx->xmit),
-                             BT_MESH_TRANSMIT_INT(tx->xmit), BUF_TIMEOUT);
+    buf = bt_mesh_adv_create(BLE_MESH_ADV_DATA,
+                             BLE_MESH_TRANSMIT_COUNT(tx->xmit),
+                             BLE_MESH_TRANSMIT_INT(tx->xmit), BUF_TIMEOUT);
     if (!buf) {
-        BT_ERR("Out of network buffers");
+        BT_ERR("%s, Out of network buffers", __func__);
         return -ENOBUFS;
     }
 
-    net_buf_reserve(buf, BT_MESH_NET_HDR_LEN);
+    net_buf_reserve(buf, BLE_MESH_NET_HDR_LEN);
 
-    if (tx->ctx->app_idx == BT_MESH_KEY_DEV) {
+    if (tx->ctx->app_idx == BLE_MESH_KEY_DEV) {
         net_buf_add_u8(buf, UNSEG_HDR(0, 0));
     } else {
         net_buf_add_u8(buf, UNSEG_HDR(1, tx->aid));
@@ -127,12 +125,12 @@ static int send_unseg(struct bt_mesh_net_tx *tx, struct net_buf_simple *sdu,
 
     net_buf_add_mem(buf, sdu->data, sdu->len);
 
-#if CONFIG_BT_MESH_NODE
+#if CONFIG_BLE_MESH_NODE
     if (bt_mesh_is_provisioned()) {
-        if (IS_ENABLED(CONFIG_BT_MESH_FRIEND)) {
-            if (bt_mesh_friend_enqueue_tx(tx, BT_MESH_FRIEND_PDU_SINGLE,
+        if (IS_ENABLED(CONFIG_BLE_MESH_FRIEND)) {
+            if (bt_mesh_friend_enqueue_tx(tx, BLE_MESH_FRIEND_PDU_SINGLE,
                                           NULL, &buf->b) &&
-                    BT_MESH_ADDR_IS_UNICAST(tx->ctx->addr)) {
+                    BLE_MESH_ADDR_IS_UNICAST(tx->ctx->addr)) {
                 /* PDUs for a specific Friend should only go
                 * out through the Friend Queue.
                 */
@@ -169,7 +167,7 @@ static void seg_tx_reset(struct seg_tx *tx)
     tx->cb_data = NULL;
     tx->seq_auth = 0;
     tx->sub = NULL;
-    tx->dst = BT_MESH_ADDR_UNASSIGNED;
+    tx->dst = BLE_MESH_ADDR_UNASSIGNED;
 
     if (!tx->nack_count) {
         return;
@@ -249,13 +247,13 @@ static void seg_tx_send_unacked(struct seg_tx *tx)
             continue;
         }
 
-        if (BT_MESH_ADV(seg)->busy) {
+        if (BLE_MESH_ADV(seg)->busy) {
             BT_DBG("Skipping segment that's still advertising");
             continue;
         }
 
-        if (!(BT_MESH_ADV(seg)->seg.attempts--)) {
-            BT_ERR("Ran out of retransmit attempts");
+        if (!(BLE_MESH_ADV(seg)->seg.attempts--)) {
+            BT_ERR("%s, Ran out of retransmit attempts", __func__);
             seg_tx_complete(tx, -ETIMEDOUT);
             return;
         }
@@ -265,7 +263,7 @@ static void seg_tx_send_unacked(struct seg_tx *tx)
         err = bt_mesh_net_resend(tx->sub, seg, tx->new_key,
                                  &seg_sent_cb, tx);
         if (err) {
-            BT_ERR("Sending segment failed");
+            BT_ERR("%s, Send segment failed", __func__);
             seg_tx_complete(tx, -EIO);
             return;
         }
@@ -292,12 +290,12 @@ static int send_seg(struct bt_mesh_net_tx *net_tx, struct net_buf_simple *sdu,
            net_tx->aszmic, sdu->len);
 
     if (sdu->len < 1) {
-        BT_ERR("Zero-length SDU not allowed");
+        BT_ERR("%s, Zero-length SDU not allowed", __func__);
         return -EINVAL;
     }
 
-    if (sdu->len > BT_MESH_TX_SDU_MAX) {
-        BT_ERR("Not enough segment buffers for length %u", sdu->len);
+    if (sdu->len > BLE_MESH_TX_SDU_MAX) {
+        BT_ERR("%s, Not enough segment buffers for length %u", __func__, sdu->len);
         return -EMSGSIZE;
     }
 
@@ -309,11 +307,11 @@ static int send_seg(struct bt_mesh_net_tx *net_tx, struct net_buf_simple *sdu,
     }
 
     if (!tx) {
-        BT_ERR("No multi-segment message contexts available");
+        BT_ERR("%s, No multi-segment message contexts available", __func__);
         return -EBUSY;
     }
 
-    if (net_tx->ctx->app_idx == BT_MESH_KEY_DEV) {
+    if (net_tx->ctx->app_idx == BLE_MESH_KEY_DEV) {
         seg_hdr = SEG_HDR(0, 0);
     } else {
         seg_hdr = SEG_HDR(1, net_tx->aid);
@@ -323,7 +321,7 @@ static int send_seg(struct bt_mesh_net_tx *net_tx, struct net_buf_simple *sdu,
     tx->dst = net_tx->ctx->addr;
     tx->seg_n = (sdu->len - 1) / 12;
     tx->nack_count = tx->seg_n + 1;
-    tx->seq_auth = SEQ_AUTH(BT_MESH_NET_IVI_TX, bt_mesh.seq);
+    tx->seq_auth = SEQ_AUTH(BLE_MESH_NET_IVI_TX, bt_mesh.seq);
     tx->sub = net_tx->sub;
     tx->new_key = net_tx->sub->kr_flag;
     tx->cb = cb;
@@ -338,19 +336,19 @@ static int send_seg(struct bt_mesh_net_tx *net_tx, struct net_buf_simple *sdu,
         u16_t len;
         int err;
 
-        seg = bt_mesh_adv_create(BT_MESH_ADV_DATA,
-                                 BT_MESH_TRANSMIT_COUNT(net_tx->xmit),
-                                 BT_MESH_TRANSMIT_INT(net_tx->xmit),
+        seg = bt_mesh_adv_create(BLE_MESH_ADV_DATA,
+                                 BLE_MESH_TRANSMIT_COUNT(net_tx->xmit),
+                                 BLE_MESH_TRANSMIT_INT(net_tx->xmit),
                                  BUF_TIMEOUT);
         if (!seg) {
-            BT_ERR("Out of segment buffers");
+            BT_ERR("%s, Out of segment buffers", __func__);
             seg_tx_reset(tx);
             return -ENOBUFS;
         }
 
-        BT_MESH_ADV(seg)->seg.attempts = SEG_RETRANSMIT_ATTEMPTS;
+        BLE_MESH_ADV(seg)->seg.attempts = SEG_RETRANSMIT_ATTEMPTS;
 
-        net_buf_reserve(seg, BT_MESH_NET_HDR_LEN);
+        net_buf_reserve(seg, BLE_MESH_NET_HDR_LEN);
 
         net_buf_add_u8(seg, seg_hdr);
         net_buf_add_u8(seg, (net_tx->aszmic << 7) | seq_zero >> 6);
@@ -358,27 +356,27 @@ static int send_seg(struct bt_mesh_net_tx *net_tx, struct net_buf_simple *sdu,
                              (seg_o >> 3)));
         net_buf_add_u8(seg, ((seg_o & 0x07) << 5) | tx->seg_n);
 
-        len = min(sdu->len, 12);
+        len = MIN(sdu->len, 12);
         net_buf_add_mem(seg, sdu->data, len);
         net_buf_simple_pull(sdu, len);
 
         tx->seg[seg_o] = net_buf_ref(seg);
 
-#if CONFIG_BT_MESH_NODE
+#if CONFIG_BLE_MESH_NODE
         if (bt_mesh_is_provisioned()) {
-            if (IS_ENABLED(CONFIG_BT_MESH_FRIEND)) {
+            if (IS_ENABLED(CONFIG_BLE_MESH_FRIEND)) {
                 enum bt_mesh_friend_pdu_type type;
 
                 if (seg_o == tx->seg_n) {
-                    type = BT_MESH_FRIEND_PDU_COMPLETE;
+                    type = BLE_MESH_FRIEND_PDU_COMPLETE;
                 } else {
-                    type = BT_MESH_FRIEND_PDU_PARTIAL;
+                    type = BLE_MESH_FRIEND_PDU_PARTIAL;
                 }
 
                 if (bt_mesh_friend_enqueue_tx(net_tx, type,
                                               &tx->seq_auth,
                                               &seg->b) &&
-                        BT_MESH_ADDR_IS_UNICAST(net_tx->ctx->addr)) {
+                        BLE_MESH_ADDR_IS_UNICAST(net_tx->ctx->addr)) {
                     /* PDUs for a specific Friend should only go
                     * out through the Friend Queue.
                     */
@@ -395,13 +393,13 @@ static int send_seg(struct bt_mesh_net_tx *net_tx, struct net_buf_simple *sdu,
                                seg_o ? &seg_sent_cb : &first_sent_cb,
                                tx);
         if (err) {
-            BT_ERR("Sending segment failed");
+            BT_ERR("%s, Sending segment failed", __func__);
             seg_tx_reset(tx);
             return err;
         }
     }
 
-#if CONFIG_BT_MESH_NODE
+#if CONFIG_BLE_MESH_NODE
     if (bt_mesh_is_provisioned()) {
         if (bt_mesh_lpn_established()) {
             bt_mesh_lpn_poll();
@@ -419,7 +417,7 @@ struct bt_mesh_app_key *bt_mesh_app_key_find(u16_t app_idx)
     for (i = 0; i < ARRAY_SIZE(bt_mesh.app_keys); i++) {
         struct bt_mesh_app_key *key = &bt_mesh.app_keys[i];
 
-        if (key->net_idx != BT_MESH_KEY_UNUSED &&
+        if (key->net_idx != BLE_MESH_KEY_UNUSED &&
                 key->app_idx == app_idx) {
             return key;
         }
@@ -436,7 +434,7 @@ int bt_mesh_trans_send(struct bt_mesh_net_tx *tx, struct net_buf_simple *msg,
     int err;
 
     if (net_buf_simple_tailroom(msg) < 4) {
-        BT_ERR("Insufficient tailroom for Transport MIC");
+        BT_ERR("%s, Insufficient tailroom for Transport MIC", __func__);
         return -EINVAL;
     }
 
@@ -448,14 +446,14 @@ int bt_mesh_trans_send(struct bt_mesh_net_tx *tx, struct net_buf_simple *msg,
            tx->ctx->app_idx, tx->ctx->addr);
     BT_DBG("len %u: %s", msg->len, bt_hex(msg->data, msg->len));
 
-    role = bt_mesh_get_msg_role(tx->ctx->model, tx->ctx->srv_send);
+    role = bt_mesh_get_model_role(tx->ctx->model, tx->ctx->srv_send);
     if (role == ROLE_NVAL) {
-        BT_ERR("%s: Failed to get role", __func__);
+        BT_ERR("%s, Failed to get model role", __func__);
         return -EINVAL;
     }
 
-    if (tx->ctx->app_idx == BT_MESH_KEY_DEV) {
-#if CONFIG_BT_MESH_NODE && !CONFIG_BT_MESH_PROVISIONER
+    if (tx->ctx->app_idx == BLE_MESH_KEY_DEV) {
+#if CONFIG_BLE_MESH_NODE && !CONFIG_BLE_MESH_PROVISIONER
         if (role == NODE) {
             if (!bt_mesh_is_provisioner_en()) {
                 key = bt_mesh.dev_key;
@@ -463,7 +461,7 @@ int bt_mesh_trans_send(struct bt_mesh_net_tx *tx, struct net_buf_simple *msg,
         }
 #endif
 
-#if !CONFIG_BT_MESH_NODE && CONFIG_BT_MESH_PROVISIONER
+#if !CONFIG_BLE_MESH_NODE && CONFIG_BLE_MESH_PROVISIONER
         if (role == PROVISIONER) {
             if (bt_mesh_is_provisioner_en()) {
                 key = provisioner_get_device_key(tx->ctx->addr);
@@ -471,7 +469,7 @@ int bt_mesh_trans_send(struct bt_mesh_net_tx *tx, struct net_buf_simple *msg,
         }
 #endif
 
-#if CONFIG_BT_MESH_NODE && CONFIG_BT_MESH_PROVISIONER
+#if CONFIG_BLE_MESH_NODE && CONFIG_BLE_MESH_PROVISIONER
         if (role == NODE) {
             key = bt_mesh.dev_key;
         } else if (role == PROVISIONER) {
@@ -479,14 +477,14 @@ int bt_mesh_trans_send(struct bt_mesh_net_tx *tx, struct net_buf_simple *msg,
                 key = provisioner_get_device_key(tx->ctx->addr);
             }
         } else if (role == FAST_PROV) {
-#if CONFIG_BT_MESH_FAST_PROV
+#if CONFIG_BLE_MESH_FAST_PROV
             key = get_fast_prov_device_key(tx->ctx->addr);
 #endif
         }
 #endif
 
         if (!key) {
-            BT_ERR("%s: Failed to get device key", __func__);
+            BT_ERR("%s, Failed to get Device Key", __func__);
             return -EINVAL;
         }
 
@@ -494,7 +492,7 @@ int bt_mesh_trans_send(struct bt_mesh_net_tx *tx, struct net_buf_simple *msg,
     } else {
         struct bt_mesh_app_key *app_key = NULL;
 
-#if CONFIG_BT_MESH_NODE && !CONFIG_BT_MESH_PROVISIONER
+#if CONFIG_BLE_MESH_NODE && !CONFIG_BLE_MESH_PROVISIONER
         if (role == NODE) {
             if (!bt_mesh_is_provisioner_en()) {
                 app_key = bt_mesh_app_key_find(tx->ctx->app_idx);
@@ -502,7 +500,7 @@ int bt_mesh_trans_send(struct bt_mesh_net_tx *tx, struct net_buf_simple *msg,
         }
 #endif
 
-#if !CONFIG_BT_MESH_NODE && CONFIG_BT_MESH_PROVISIONER
+#if !CONFIG_BLE_MESH_NODE && CONFIG_BLE_MESH_PROVISIONER
         if (role == PROVISIONER) {
             if (bt_mesh_is_provisioner_en()) {
                 app_key = provisioner_app_key_find(tx->ctx->app_idx);
@@ -510,7 +508,7 @@ int bt_mesh_trans_send(struct bt_mesh_net_tx *tx, struct net_buf_simple *msg,
         }
 #endif
 
-#if CONFIG_BT_MESH_NODE && CONFIG_BT_MESH_PROVISIONER
+#if CONFIG_BLE_MESH_NODE && CONFIG_BLE_MESH_PROVISIONER
         if (role == NODE) {
             app_key = bt_mesh_app_key_find(tx->ctx->app_idx);
         } else if (role == PROVISIONER) {
@@ -518,18 +516,18 @@ int bt_mesh_trans_send(struct bt_mesh_net_tx *tx, struct net_buf_simple *msg,
                 app_key = provisioner_app_key_find(tx->ctx->app_idx);
             }
         } else if (role == FAST_PROV) {
-#if CONFIG_BT_MESH_FAST_PROV
+#if CONFIG_BLE_MESH_FAST_PROV
             app_key = get_fast_prov_app_key(tx->ctx->net_idx, tx->ctx->app_idx);
 #endif
         }
 #endif
 
         if (!app_key) {
-            BT_ERR("%s: Failed to get app key", __func__);
+            BT_ERR("%s, Failed to get AppKey", __func__);
             return -EINVAL;
         }
 
-        if (tx->sub->kr_phase == BT_MESH_KR_PHASE_2 &&
+        if (tx->sub->kr_phase == BLE_MESH_KR_PHASE_2 &&
                 app_key->updated) {
             key = app_key->keys[1].val;
             tx->aid = app_key->keys[1].id;
@@ -545,16 +543,16 @@ int bt_mesh_trans_send(struct bt_mesh_net_tx *tx, struct net_buf_simple *msg,
         tx->aszmic = 1;
     }
 
-    if (BT_MESH_ADDR_IS_VIRTUAL(tx->ctx->addr)) {
+    if (BLE_MESH_ADDR_IS_VIRTUAL(tx->ctx->addr)) {
         ad = bt_mesh_label_uuid_get(tx->ctx->addr);
     } else {
         ad = NULL;
     }
 
-    err = bt_mesh_app_encrypt(key, tx->ctx->app_idx == BT_MESH_KEY_DEV,
+    err = bt_mesh_app_encrypt(key, tx->ctx->app_idx == BLE_MESH_KEY_DEV,
                               tx->aszmic, msg, ad, tx->src,
                               tx->ctx->addr, bt_mesh.seq,
-                              BT_MESH_NET_IVI_TX);
+                              BLE_MESH_NET_IVI_TX);
     if (err) {
         return err;
     }
@@ -599,7 +597,7 @@ static bool is_replay(struct bt_mesh_net_rx *rx)
             rpl->src = rx->ctx.addr;
             rpl->seq = rx->seq;
             rpl->old_iv = rx->old_iv;
-            if (IS_ENABLED(CONFIG_BT_MESH_SETTINGS)) {
+            if (IS_ENABLED(CONFIG_BLE_MESH_SETTINGS)) {
                 BT_DBG("Store rpl");
                 bt_mesh_store_rpl(rpl);
             }
@@ -633,7 +631,7 @@ static bool is_replay(struct bt_mesh_net_rx *rx)
         }
     }
 
-    BT_ERR("RPL is full!");
+    BT_ERR("%s, RPL is full!", __func__);
     return true;
 }
 
@@ -641,7 +639,7 @@ static int sdu_recv(struct bt_mesh_net_rx *rx, u32_t seq, u8_t hdr, u8_t aszmic,
                     struct net_buf_simple *buf)
 {
     struct net_buf_simple *sdu =
-        NET_BUF_SIMPLE(CONFIG_BT_MESH_RX_SDU_MAX - 4);
+        NET_BUF_SIMPLE(CONFIG_BLE_MESH_RX_SDU_MAX - 4);
     u32_t array_size = 0;
     u8_t *ad;
     u16_t i;
@@ -651,16 +649,16 @@ static int sdu_recv(struct bt_mesh_net_rx *rx, u32_t seq, u8_t hdr, u8_t aszmic,
     BT_DBG("len %u: %s", buf->len, bt_hex(buf->data, buf->len));
 
     if (buf->len < 1 + APP_MIC_LEN(aszmic)) {
-        BT_ERR("Too short SDU + MIC");
+        BT_ERR("%s, Too short SDU + MIC", __func__);
         return -EINVAL;
     }
 
-    if (IS_ENABLED(CONFIG_BT_MESH_FRIEND) && !rx->local_match) {
+    if (IS_ENABLED(CONFIG_BLE_MESH_FRIEND) && !rx->local_match) {
         BT_DBG("Ignoring PDU for LPN 0x%04x of this Friend", rx->dst);
         return 0;
     }
 
-    if (BT_MESH_ADDR_IS_VIRTUAL(rx->dst)) {
+    if (BLE_MESH_ADDR_IS_VIRTUAL(rx->dst)) {
         ad = bt_mesh_label_uuid_get(rx->dst);
     } else {
         ad = NULL;
@@ -670,19 +668,19 @@ static int sdu_recv(struct bt_mesh_net_rx *rx, u32_t seq, u8_t hdr, u8_t aszmic,
     buf->len -= APP_MIC_LEN(aszmic);
 
     if (!AKF(&hdr)) {
-#if CONFIG_BT_MESH_NODE && !CONFIG_BT_MESH_PROVISIONER
+#if CONFIG_BLE_MESH_NODE && !CONFIG_BLE_MESH_PROVISIONER
         if (!bt_mesh_is_provisioner_en()) {
             array_size = 1;
         }
 #endif
 
-#if !CONFIG_BT_MESH_NODE && CONFIG_BT_MESH_PROVISIONER
+#if !CONFIG_BLE_MESH_NODE && CONFIG_BLE_MESH_PROVISIONER
         if (bt_mesh_is_provisioner_en()) {
             array_size = 1;
         }
 #endif
 
-#if CONFIG_BT_MESH_NODE && CONFIG_BT_MESH_PROVISIONER
+#if CONFIG_BLE_MESH_NODE && CONFIG_BLE_MESH_PROVISIONER
         array_size = 1;
         if (bt_mesh_is_provisioner_en()) {
             array_size += 1;
@@ -692,19 +690,19 @@ static int sdu_recv(struct bt_mesh_net_rx *rx, u32_t seq, u8_t hdr, u8_t aszmic,
         for (i = 0; i < array_size; i++) {
             const u8_t *dev_key = NULL;
 
-#if CONFIG_BT_MESH_NODE && !CONFIG_BT_MESH_PROVISIONER
+#if CONFIG_BLE_MESH_NODE && !CONFIG_BLE_MESH_PROVISIONER
             if (!bt_mesh_is_provisioner_en()) {
                 dev_key = bt_mesh.dev_key;
             }
 #endif
 
-#if !CONFIG_BT_MESH_NODE && CONFIG_BT_MESH_PROVISIONER
+#if !CONFIG_BLE_MESH_NODE && CONFIG_BLE_MESH_PROVISIONER
             if (bt_mesh_is_provisioner_en()) {
                 dev_key = provisioner_get_device_key(rx->ctx.addr);
             }
 #endif
 
-#if CONFIG_BT_MESH_NODE && CONFIG_BT_MESH_PROVISIONER
+#if CONFIG_BLE_MESH_NODE && CONFIG_BLE_MESH_PROVISIONER
             if (i < 1) {
                 dev_key = bt_mesh.dev_key;
             } else {
@@ -713,19 +711,19 @@ static int sdu_recv(struct bt_mesh_net_rx *rx, u32_t seq, u8_t hdr, u8_t aszmic,
 #endif
 
             if (!dev_key) {
-                BT_DBG("%s: NULL DevKey", __func__);
+                BT_DBG("%s, NULL Device Key", __func__);
                 continue;
             }
 
             net_buf_simple_init(sdu, 0);
             err = bt_mesh_app_decrypt(dev_key, true, aszmic, buf,
                                       sdu, ad, rx->ctx.addr, rx->dst,
-                                      seq, BT_MESH_NET_IVI_RX(rx));
+                                      seq, BLE_MESH_NET_IVI_RX(rx));
             if (err) {
                 continue;
             }
 
-            rx->ctx.app_idx = BT_MESH_KEY_DEV;
+            rx->ctx.app_idx = BLE_MESH_KEY_DEV;
             bt_mesh_model_recv(rx, sdu);
             return 0;
         }
@@ -734,19 +732,19 @@ static int sdu_recv(struct bt_mesh_net_rx *rx, u32_t seq, u8_t hdr, u8_t aszmic,
         return -ENODEV;
     }
 
-#if CONFIG_BT_MESH_NODE && !CONFIG_BT_MESH_PROVISIONER
+#if CONFIG_BLE_MESH_NODE && !CONFIG_BLE_MESH_PROVISIONER
     if (!bt_mesh_is_provisioner_en()) {
         array_size = ARRAY_SIZE(bt_mesh.app_keys);
     }
 #endif
 
-#if !CONFIG_BT_MESH_NODE && CONFIG_BT_MESH_PROVISIONER
+#if !CONFIG_BLE_MESH_NODE && CONFIG_BLE_MESH_PROVISIONER
     if (bt_mesh_is_provisioner_en()) {
         array_size = ARRAY_SIZE(bt_mesh.p_app_keys);
     }
 #endif
 
-#if CONFIG_BT_MESH_NODE && CONFIG_BT_MESH_PROVISIONER
+#if CONFIG_BLE_MESH_NODE && CONFIG_BLE_MESH_PROVISIONER
     array_size = ARRAY_SIZE(bt_mesh.app_keys);
     if (bt_mesh_is_provisioner_en()) {
         array_size += ARRAY_SIZE(bt_mesh.p_app_keys);
@@ -757,19 +755,19 @@ static int sdu_recv(struct bt_mesh_net_rx *rx, u32_t seq, u8_t hdr, u8_t aszmic,
         struct bt_mesh_app_key  *key  = NULL;
         struct bt_mesh_app_keys *keys = NULL;
 
-#if CONFIG_BT_MESH_NODE && !CONFIG_BT_MESH_PROVISIONER
+#if CONFIG_BLE_MESH_NODE && !CONFIG_BLE_MESH_PROVISIONER
         if (!bt_mesh_is_provisioner_en()) {
             key = &bt_mesh.app_keys[i];
         }
 #endif
 
-#if !CONFIG_BT_MESH_NODE && CONFIG_BT_MESH_PROVISIONER
+#if !CONFIG_BLE_MESH_NODE && CONFIG_BLE_MESH_PROVISIONER
         if (bt_mesh_is_provisioner_en()) {
             key = bt_mesh.p_app_keys[i];
         }
 #endif
 
-#if CONFIG_BT_MESH_NODE && CONFIG_BT_MESH_PROVISIONER
+#if CONFIG_BLE_MESH_NODE && CONFIG_BLE_MESH_PROVISIONER
         if (i < ARRAY_SIZE(bt_mesh.app_keys)) {
             key = &bt_mesh.app_keys[i];
         } else {
@@ -778,7 +776,7 @@ static int sdu_recv(struct bt_mesh_net_rx *rx, u32_t seq, u8_t hdr, u8_t aszmic,
 #endif
 
         if (!key) {
-            BT_DBG("%s: NULL AppKey", __func__);
+            BT_DBG("%s, NULL AppKey", __func__);
             continue;
         }
 
@@ -801,7 +799,7 @@ static int sdu_recv(struct bt_mesh_net_rx *rx, u32_t seq, u8_t hdr, u8_t aszmic,
         net_buf_simple_init(sdu, 0);
         err = bt_mesh_app_decrypt(keys->val, false, aszmic, buf,
                                   sdu, ad, rx->ctx.addr, rx->dst,
-                                  seq, BT_MESH_NET_IVI_RX(rx));
+                                  seq, BLE_MESH_NET_IVI_RX(rx));
         if (err) {
             BT_DBG("Unable to decrypt with AppKey 0x%03x", key->app_idx);
             continue;
@@ -858,7 +856,7 @@ static int trans_ack(struct bt_mesh_net_rx *rx, u8_t hdr,
     u8_t obo;
 
     if (buf->len < 6) {
-        BT_ERR("Too short ack message");
+        BT_ERR("%s, Too short ack message", __func__);
         return -EINVAL;
     }
 
@@ -866,10 +864,10 @@ static int trans_ack(struct bt_mesh_net_rx *rx, u8_t hdr,
     obo = seq_zero >> 15;
     seq_zero = (seq_zero >> 2) & 0x1fff;
 
-    if (IS_ENABLED(CONFIG_BT_MESH_FRIEND) && rx->friend_match) {
+    if (IS_ENABLED(CONFIG_BLE_MESH_FRIEND) && rx->friend_match) {
         BT_DBG("Ack for LPN 0x%04x of this Friend", rx->dst);
         /* Best effort - as there is not enough info for true SeqAuth */
-        *seq_auth = SEQ_AUTH(BT_MESH_NET_IVI_RX(rx), seq_zero);
+        *seq_auth = SEQ_AUTH(BLE_MESH_NET_IVI_RX(rx), seq_zero);
         return 0;
     }
 
@@ -892,7 +890,7 @@ static int trans_ack(struct bt_mesh_net_rx *rx, u8_t hdr,
     }
 
     if (find_msb_set(ack) - 1 > tx->seg_n) {
-        BT_ERR("Too large segment number in ack");
+        BT_ERR("%s, Too large segment number in ack", __func__);
         return -EINVAL;
     }
 
@@ -926,7 +924,7 @@ static int trans_heartbeat(struct bt_mesh_net_rx *rx,
     u16_t feat;
 
     if (buf->len < 3) {
-        BT_ERR("Too short heartbeat message");
+        BT_ERR("%s, Too short heartbeat message", __func__);
         return -EINVAL;
     }
 
@@ -968,9 +966,9 @@ static int ctl_recv(struct bt_mesh_net_rx *rx, u8_t hdr,
         return 0;
     }
 
-#if CONFIG_BT_MESH_NODE
+#if CONFIG_BLE_MESH_NODE
     if (bt_mesh_is_provisioned()) {
-        if (IS_ENABLED(CONFIG_BT_MESH_FRIEND) && !bt_mesh_lpn_established()) {
+        if (IS_ENABLED(CONFIG_BLE_MESH_FRIEND) && !bt_mesh_lpn_established()) {
             switch (ctl_op) {
             case TRANS_CTL_OP_FRIEND_POLL:
                 return bt_mesh_friend_poll(rx, buf);
@@ -987,7 +985,7 @@ static int ctl_recv(struct bt_mesh_net_rx *rx, u8_t hdr,
             }
         }
 
-#if defined(CONFIG_BT_MESH_LOW_POWER)
+#if defined(CONFIG_BLE_MESH_LOW_POWER)
         if (ctl_op == TRANS_CTL_OP_FRIEND_OFFER) {
             return bt_mesh_lpn_friend_offer(rx, buf);
         }
@@ -1009,9 +1007,9 @@ static int ctl_recv(struct bt_mesh_net_rx *rx, u8_t hdr,
                 return bt_mesh_lpn_friend_sub_cfm(rx, buf);
             }
         }
-#endif /* CONFIG_BT_MESH_LOW_POWER */
+#endif /* CONFIG_BLE_MESH_LOW_POWER */
     }
-#endif /* CONFIG_BT_MESH_NODE */
+#endif /* CONFIG_BLE_MESH_NODE */
 
     BT_WARN("Unhandled TransOpCode 0x%02x", ctl_op);
 
@@ -1026,7 +1024,7 @@ static int trans_unseg(struct net_buf_simple *buf, struct bt_mesh_net_rx *rx,
     BT_DBG("AFK %u AID 0x%02x", AKF(buf->data), AID(buf->data));
 
     if (buf->len < 1) {
-        BT_ERR("Too small unsegmented PDU");
+        BT_ERR("%s, Too small unsegmented PDU", __func__);
         return -EINVAL;
     }
 
@@ -1065,7 +1063,7 @@ static inline s32_t ack_timeout(struct seg_rx *rx)
     /* Make sure we don't send more frequently than the duration for
      * each packet (default is 300ms).
      */
-    return max(to, K_MSEC(400));
+    return MAX(to, K_MSEC(400));
 }
 
 int bt_mesh_ctl_send(struct bt_mesh_net_tx *tx, u8_t ctl_op, void *data,
@@ -1078,24 +1076,24 @@ int bt_mesh_ctl_send(struct bt_mesh_net_tx *tx, u8_t ctl_op, void *data,
            tx->ctx->addr, tx->ctx->send_ttl, ctl_op);
     BT_DBG("len %u: %s", data_len, bt_hex(data, data_len));
 
-    buf = bt_mesh_adv_create(BT_MESH_ADV_DATA,
-                             BT_MESH_TRANSMIT_COUNT(tx->xmit),
-                             BT_MESH_TRANSMIT_INT(tx->xmit), BUF_TIMEOUT);
+    buf = bt_mesh_adv_create(BLE_MESH_ADV_DATA,
+                             BLE_MESH_TRANSMIT_COUNT(tx->xmit),
+                             BLE_MESH_TRANSMIT_INT(tx->xmit), BUF_TIMEOUT);
     if (!buf) {
-        BT_ERR("Out of transport buffers");
+        BT_ERR("%s, Out of transport buffers", __func__);
         return -ENOBUFS;
     }
 
-    net_buf_reserve(buf, BT_MESH_NET_HDR_LEN);
+    net_buf_reserve(buf, BLE_MESH_NET_HDR_LEN);
 
     net_buf_add_u8(buf, TRANS_CTL_HDR(ctl_op, 0));
 
     net_buf_add_mem(buf, data, data_len);
 
-    if (IS_ENABLED(CONFIG_BT_MESH_FRIEND)) {
-        if (bt_mesh_friend_enqueue_tx(tx, BT_MESH_FRIEND_PDU_SINGLE,
+    if (IS_ENABLED(CONFIG_BLE_MESH_FRIEND)) {
+        if (bt_mesh_friend_enqueue_tx(tx, BLE_MESH_FRIEND_PDU_SINGLE,
                                       seq_auth, &buf->b) &&
-                BT_MESH_ADDR_IS_UNICAST(tx->ctx->addr)) {
+                BLE_MESH_ADDR_IS_UNICAST(tx->ctx->addr)) {
             /* PDUs for a specific Friend should only go
              * out through the Friend Queue.
              */
@@ -1112,7 +1110,7 @@ static int send_ack(struct bt_mesh_subnet *sub, u16_t src, u16_t dst,
 {
     struct bt_mesh_msg_ctx ctx = {
         .net_idx = sub->net_idx,
-        .app_idx = BT_MESH_KEY_UNUSED,
+        .app_idx = BLE_MESH_KEY_UNUSED,
         .addr = dst,
         .send_ttl = ttl,
     };
@@ -1135,7 +1133,7 @@ static int send_ack(struct bt_mesh_subnet *sub, u16_t src, u16_t dst,
     /* This can happen if the segmented message was destined for a group
      * or a virtual address.
      */
-    if (!BT_MESH_ADDR_IS_UNICAST(src)) {
+    if (!BLE_MESH_ADDR_IS_UNICAST(src)) {
         BT_WARN("Not sending ACK for non-unicast address");
         return 0;
     }
@@ -1153,7 +1151,7 @@ static void seg_rx_reset(struct seg_rx *rx)
 
     k_delayed_work_cancel(&rx->ack);
 
-    if (IS_ENABLED(CONFIG_BT_MESH_FRIEND) && rx->obo &&
+    if (IS_ENABLED(CONFIG_BLE_MESH_FRIEND) && rx->obo &&
             rx->block != BLOCK_COMPLETE(rx->seg_n)) {
         BT_WARN("Clearing incomplete buffers from Friend queue");
         bt_mesh_friend_clear_incomplete(rx->sub, rx->src, rx->dst,
@@ -1199,7 +1197,7 @@ static inline u8_t seg_len(bool ctl)
 
 static inline bool sdu_len_is_ok(bool ctl, u8_t seg_n)
 {
-    return ((seg_n * seg_len(ctl) + 1) <= CONFIG_BT_MESH_RX_SDU_MAX);
+    return ((seg_n * seg_len(ctl) + 1) <= CONFIG_BLE_MESH_RX_SDU_MAX);
 }
 
 static struct seg_rx *seg_rx_find(struct bt_mesh_net_rx *net_rx,
@@ -1239,17 +1237,17 @@ static bool seg_rx_is_valid(struct seg_rx *rx, struct bt_mesh_net_rx *net_rx,
                             const u8_t *hdr, u8_t seg_n)
 {
     if (rx->hdr != *hdr || rx->seg_n != seg_n) {
-        BT_ERR("Invalid segment for ongoing session");
+        BT_ERR("%s, Invalid segment for ongoing session", __func__);
         return false;
     }
 
     if (rx->src != net_rx->ctx.addr || rx->dst != net_rx->dst) {
-        BT_ERR("Invalid source or destination for segment");
+        BT_ERR("%s, Invalid source or destination for segment", __func__);
         return false;
     }
 
     if (rx->ctl != net_rx->ctl) {
-        BT_ERR("Inconsistent CTL in segment");
+        BT_ERR("%s, Inconsistent CTL in segment", __func__);
         return false;
     }
 
@@ -1301,7 +1299,7 @@ static int trans_seg(struct net_buf_simple *buf, struct bt_mesh_net_rx *net_rx,
     int err;
 
     if (buf->len < 5) {
-        BT_ERR("Too short segmented message (len %u)", buf->len);
+        BT_ERR("%s, Too short segmented message (len %u)", __func__, buf->len);
         return -EINVAL;
     }
 
@@ -1319,7 +1317,7 @@ static int trans_seg(struct net_buf_simple *buf, struct bt_mesh_net_rx *net_rx,
     BT_DBG("SeqZero 0x%04x SegO %u SegN %u", seq_zero, seg_o, seg_n);
 
     if (seg_o > seg_n) {
-        BT_ERR("SegO greater than SegN (%u > %u)", seg_o, seg_n);
+        BT_ERR("%s, SegO is greater than SegN (%u > %u)", __func__, seg_o, seg_n);
         return -EINVAL;
     }
 
@@ -1336,7 +1334,7 @@ static int trans_seg(struct net_buf_simple *buf, struct bt_mesh_net_rx *net_rx,
      * Mentioned delta shall be >= 0, if it is not then seq_auth will
      * be broken and it will be verified by the code below.
      */
-    *seq_auth = SEQ_AUTH(BT_MESH_NET_IVI_RX(net_rx),
+    *seq_auth = SEQ_AUTH(BLE_MESH_NET_IVI_RX(net_rx),
                  (net_rx->seq -
                   ((((net_rx->seq & BIT_MASK(14)) - seq_zero)) &
                    BIT_MASK(13))));
@@ -1377,7 +1375,7 @@ static int trans_seg(struct net_buf_simple *buf, struct bt_mesh_net_rx *net_rx,
 
     /* Leave early, if such a large SDU cannot be received */
     if (!sdu_len_is_ok(net_rx->ctl, seg_n)) {
-        BT_ERR("Too big incoming SDU length");
+        BT_ERR("%s, Too big incoming SDU length", __func__);
         send_ack(net_rx->sub, net_rx->dst, net_rx->ctx.addr,
                  net_rx->ctx.send_ttl, seq_auth, 0,
                  net_rx->friend_match);
@@ -1413,7 +1411,7 @@ found_rx:
         BT_DBG("Target len %u * %u + %u = %u", seg_n, seg_len(rx->ctl),
                buf->len, rx->buf.len);
 
-        if (rx->buf.len > CONFIG_BT_MESH_RX_SDU_MAX) {
+        if (rx->buf.len > CONFIG_BLE_MESH_RX_SDU_MAX) {
             BT_ERR("Too large SDU len");
             send_ack(net_rx->sub, net_rx->dst, net_rx->ctx.addr,
                      net_rx->ctx.send_ttl, seq_auth, 0, rx->obo);
@@ -1422,7 +1420,7 @@ found_rx:
         }
     } else {
         if (buf->len != seg_len(rx->ctl)) {
-            BT_ERR("Incorrect segment size for message type");
+            BT_ERR("%s, Incorrect segment size for message type", __func__);
             return -EINVAL;
         }
     }
@@ -1444,7 +1442,7 @@ found_rx:
     rx->block |= BIT(seg_o);
 
     if (rx->block != BLOCK_COMPLETE(seg_n)) {
-        *pdu_type = BT_MESH_FRIEND_PDU_PARTIAL;
+        *pdu_type = BLE_MESH_FRIEND_PDU_PARTIAL;
         return 0;
     }
 
@@ -1458,7 +1456,7 @@ found_rx:
         return -EINVAL;
     }
 
-    *pdu_type = BT_MESH_FRIEND_PDU_COMPLETE;
+    *pdu_type = BLE_MESH_FRIEND_PDU_COMPLETE;
 
     k_delayed_work_cancel(&rx->ack);
     send_ack(net_rx->sub, net_rx->dst, net_rx->ctx.addr,
@@ -1478,11 +1476,11 @@ found_rx:
 int bt_mesh_trans_recv(struct net_buf_simple *buf, struct bt_mesh_net_rx *rx)
 {
     u64_t seq_auth = TRANS_SEQ_AUTH_NVAL;
-    enum bt_mesh_friend_pdu_type pdu_type = BT_MESH_FRIEND_PDU_SINGLE;
+    enum bt_mesh_friend_pdu_type pdu_type = BLE_MESH_FRIEND_PDU_SINGLE;
     struct net_buf_simple_state state;
     int err;
 
-    if (IS_ENABLED(CONFIG_BT_MESH_FRIEND)) {
+    if (IS_ENABLED(CONFIG_BLE_MESH_FRIEND)) {
         rx->friend_match = bt_mesh_friend_match(rx->sub->net_idx,
                                                 rx->dst);
     } else {
@@ -1493,7 +1491,7 @@ int bt_mesh_trans_recv(struct net_buf_simple *buf, struct bt_mesh_net_rx *rx)
            rx->ctx.addr, rx->dst, rx->seq, rx->friend_match);
 
     /* Remove network headers */
-    net_buf_simple_pull(buf, BT_MESH_NET_HDR_LEN);
+    net_buf_simple_pull(buf, BLE_MESH_NET_HDR_LEN);
 
     BT_DBG("Payload %s", bt_hex(buf->data, buf->len));
 
@@ -1501,10 +1499,10 @@ int bt_mesh_trans_recv(struct net_buf_simple *buf, struct bt_mesh_net_rx *rx)
      * the Friend is requested to send them. The messages must
      * also be encrypted using the Friend Credentials.
      */
-#if CONFIG_BT_MESH_NODE
+#if CONFIG_BLE_MESH_NODE
     if (bt_mesh_is_provisioned()) {
-        if (IS_ENABLED(CONFIG_BT_MESH_LOW_POWER) &&
-                bt_mesh_lpn_established() && rx->net_if == BT_MESH_NET_IF_ADV &&
+        if (IS_ENABLED(CONFIG_BLE_MESH_LOW_POWER) &&
+                bt_mesh_lpn_established() && rx->net_if == BLE_MESH_NET_IF_ADV &&
                 (!bt_mesh_lpn_waiting_update() || !rx->friend_cred)) {
             BT_WARN("Ignoring unexpected message in Low Power mode");
             return -EAGAIN;
@@ -1545,9 +1543,9 @@ int bt_mesh_trans_recv(struct net_buf_simple *buf, struct bt_mesh_net_rx *rx)
      * the Transport OpCode was invalid. In this case, the PDU should be
      * ignored completely, as per MESH/NODE/FRND/LPN/BI-02-C.
      */
-#if CONFIG_BT_MESH_NODE
+#if CONFIG_BLE_MESH_NODE
     if (bt_mesh_is_provisioned()) {
-        if (IS_ENABLED(CONFIG_BT_MESH_LOW_POWER) && err != -ENOENT &&
+        if (IS_ENABLED(CONFIG_BLE_MESH_LOW_POWER) && err != -ENOENT &&
                 (bt_mesh_lpn_timer() ||
                  (bt_mesh_lpn_established() && bt_mesh_lpn_waiting_update()))) {
             bt_mesh_lpn_msg_received(rx);
@@ -1557,9 +1555,9 @@ int bt_mesh_trans_recv(struct net_buf_simple *buf, struct bt_mesh_net_rx *rx)
 
     net_buf_simple_restore(buf, &state);
 
-#if CONFIG_BT_MESH_NODE
+#if CONFIG_BLE_MESH_NODE
     if (bt_mesh_is_provisioned()) {
-        if (IS_ENABLED(CONFIG_BT_MESH_FRIEND) && rx->friend_match && !err) {
+        if (IS_ENABLED(CONFIG_BLE_MESH_FRIEND) && rx->friend_match && !err) {
             if (seq_auth == TRANS_SEQ_AUTH_NVAL) {
                 bt_mesh_friend_enqueue_rx(rx, pdu_type, NULL, buf);
             } else {
@@ -1580,8 +1578,8 @@ void bt_mesh_rx_reset(void)
 
     for (i = 0; i < ARRAY_SIZE(seg_rx); i++) {
         seg_rx_reset(&seg_rx[i]);
-        seg_rx[i].src = BT_MESH_ADDR_UNASSIGNED;
-        seg_rx[i].dst = BT_MESH_ADDR_UNASSIGNED;
+        seg_rx[i].src = BLE_MESH_ADDR_UNASSIGNED;
+        seg_rx[i].dst = BLE_MESH_ADDR_UNASSIGNED;
     }
 }
 
@@ -1614,5 +1612,3 @@ void bt_mesh_rpl_clear(void)
     BT_DBG("%s", __func__);
     memset(bt_mesh.rpl, 0, sizeof(bt_mesh.rpl));
 }
-
-#endif /* #if CONFIG_BT_MESH */

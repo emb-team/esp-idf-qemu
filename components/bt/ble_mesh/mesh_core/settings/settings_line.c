@@ -9,10 +9,10 @@
 
 #include "sdkconfig.h"
 
-#include "settings/include/settings.h"
-#include "settings/include/settings_priv.h"
+#include "settings_act.h"
+#include "settings_priv.h"
 
-#if CONFIG_BT_MESH_SETTINGS
+#if CONFIG_BLE_MESH_SETTINGS
 
 static inline int isspace(int c)
 {
@@ -96,4 +96,4 @@ int settings_line_make(char *dst, int dlen, const char *name, const char *value)
     return off;
 }
 
-#endif /* CONFIG_BT_MESH_SETTINGS */
+#endif /* CONFIG_BLE_MESH_SETTINGS */

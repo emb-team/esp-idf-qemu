@@ -22,7 +22,7 @@ void ble_mesh_register_mesh_node();
 // Register mesh config server and generic server operation cmd
 void ble_mesh_register_server();
 
-#if (CONFIG_BT_MESH_CFG_CLI)
+#if (CONFIG_BLE_MESH_CFG_CLI)
 // Register mesh config client operation cmd
 void ble_mesh_register_configuration_client_model();
 #endif

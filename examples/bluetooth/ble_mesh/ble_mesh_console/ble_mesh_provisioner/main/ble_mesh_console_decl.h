@@ -22,17 +22,17 @@ void ble_mesh_register_mesh_node();
 // Register Test Perf client cmd
 void ble_mesh_register_mesh_test_performance_client();
 
-#if (CONFIG_BT_MESH_CFG_CLI)
+#if (CONFIG_BLE_MESH_CFG_CLI)
 // Register mesh config client operation cmd
 void ble_mesh_register_configuration_client_model();
 #endif
 
-#if (CONFIG_BT_MESH_GENERIC_ONOFF_CLI)
+#if (CONFIG_BLE_MESH_GENERIC_ONOFF_CLI)
 // Register mesh client operation cmd
 void ble_mesh_register_gen_onoff_client();
 #endif
 
-#if CONFIG_BT_MESH_PROVISIONER
+#if CONFIG_BLE_MESH_PROVISIONER
 // Regitster mesh provisioner cmd
 void ble_mesh_register_mesh_provisioner();
 #endif

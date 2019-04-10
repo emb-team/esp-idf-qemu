@@ -17,8 +17,6 @@
 
 #include "esp_ble_mesh_defs.h"
 
-#if CONFIG_BT_MESH
-
 /** @brief: event, event code of provisioning events; param, parameters of provisioning events */
 typedef void (* esp_ble_mesh_prov_cb_t)(esp_ble_mesh_prov_cb_event_t event,
                                         esp_ble_mesh_prov_cb_param_t *param);
@@ -118,7 +116,7 @@ esp_err_t esp_ble_mesh_node_input_string(const char *string);
  */
 esp_err_t esp_ble_mesh_set_unprovisioned_device_name(const char *name);
 
-#if defined(CONFIG_BT_MESH_PROVISIONER)
+#if defined(CONFIG_BLE_MESH_PROVISIONER)
 
 /**
  * @brief        Provisioner inputs unprovisioned device's oob public key.
@@ -296,7 +294,7 @@ esp_err_t esp_ble_mesh_provisioner_set_dev_uuid_match(const uint8_t *match_val, 
  */
 esp_err_t esp_ble_mesh_provisioner_set_prov_data_info(esp_ble_mesh_prov_data_info_t *prov_data_info);
 
-#endif /* #if CONFIG_BT_MESH_PROVISIONER */
+#endif /* #if CONFIG_BLE_MESH_PROVISIONER */
 
 /**
  * @brief         This function is called to set provisioning data information before starting
@@ -319,6 +317,4 @@ esp_err_t esp_ble_mesh_set_fast_prov_info(esp_ble_mesh_fast_prov_info_t *fast_pr
  */
 esp_err_t esp_ble_mesh_set_fast_prov_action(esp_ble_mesh_fast_prov_action_t action);
 
-#endif /* #if CONFIG_BT_MESH */
 #endif /* _ESP_BLE_MESH_PROVISIONING_API_H_ */
-

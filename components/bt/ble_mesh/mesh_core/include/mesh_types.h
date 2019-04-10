@@ -5,10 +5,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef __Z_TYPES_H__
-#define __Z_TYPES_H__
+#ifndef _BLE_MESH_TYPES_H_
+#define _BLE_MESH_TYPES_H_
 
 #include <stdint.h>
+#include <stdbool.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -24,17 +25,22 @@ typedef unsigned short      u16_t;
 typedef unsigned int        u32_t;
 typedef unsigned long long  u64_t;
 
-typedef int atomic_t;
+typedef int         bt_mesh_atomic_t;
 
 #ifndef bool
 #define bool        int8_t
-#define false       0        ///< XOS definition of 'false'
-#define true        1        ///< XOS definition of 'true'
+#endif
+
+#ifndef false
+#define false       0
+#endif
+
+#ifndef true
+#define true        1
 #endif
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* __Z_TYPES_H__ */
-
+#endif /* _BLE_MESH_TYPES_H_ */

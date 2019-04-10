@@ -18,24 +18,20 @@
 #include "mesh_bearer_adapt.h"
 #include "mesh_main.h"
 
-#if !CONFIG_BT_MESH_PROVISIONER
+#if !CONFIG_BLE_MESH_PROVISIONER
 
-#define CONFIG_BT_MESH_PBA_SAME_TIME 0
-#define CONFIG_BT_MESH_PBG_SAME_TIME 0
+#define CONFIG_BLE_MESH_PBA_SAME_TIME 0
+#define CONFIG_BLE_MESH_PBG_SAME_TIME 0
 
 #else
 
-#if !defined(CONFIG_BT_MESH_PB_ADV)
-#define CONFIG_BT_MESH_PBA_SAME_TIME 0
-#endif /* !CONFIG_BT_MESH_PB_ADV */
+#if !defined(CONFIG_BLE_MESH_PB_ADV)
+#define CONFIG_BLE_MESH_PBA_SAME_TIME 0
+#endif /* !CONFIG_BLE_MESH_PB_ADV */
 
-#if !defined(CONFIG_BT_MESH_PB_GATT)
-#define CONFIG_BT_MESH_PBG_SAME_TIME 0
-#endif /* !CONFIG_BT_MESH_PB_GATT */
-
-#define BT_DATA_FLAGS         0x01
-#define BT_DATA_SERVICE_UUID  0x03
-#define BT_DATA_SERVICE_DATA  0X16
+#if !defined(CONFIG_BLE_MESH_PB_GATT)
+#define CONFIG_BLE_MESH_PBG_SAME_TIME 0
+#endif /* !CONFIG_BLE_MESH_PB_GATT */
 
 #define RM_AFTER_PROV  BIT(0)
 #define START_PROV_NOW BIT(1)
@@ -111,7 +107,7 @@ void provisioner_pb_adv_recv(struct net_buf_simple *buf);
  *
  * @return Zero - success, otherwise - fail
  */
-int provisioner_set_prov_conn(const u8_t addr[6], struct bt_conn *conn);
+int provisioner_set_prov_conn(const u8_t addr[6], struct bt_mesh_conn *conn);
 
 /**
  * @brief This function sends provisioning invite to start
@@ -122,7 +118,7 @@ int provisioner_set_prov_conn(const u8_t addr[6], struct bt_conn *conn);
  *
  * @return Zero - success, otherwise - fail
  */
-int provisioner_pb_gatt_open(struct bt_conn *conn, u8_t *addr);
+int provisioner_pb_gatt_open(struct bt_mesh_conn *conn, u8_t *addr);
 
 /**
  * @brief This function resets the used information when
@@ -133,7 +129,7 @@ int provisioner_pb_gatt_open(struct bt_conn *conn, u8_t *addr);
  *
  * @return Zero - success, otherwise - fail
  */
-int provisioner_pb_gatt_close(struct bt_conn *conn, u8_t reason);
+int provisioner_pb_gatt_close(struct bt_mesh_conn *conn, u8_t reason);
 
 /**
  * @brief This function handles the received PB-GATT provision
@@ -144,7 +140,7 @@ int provisioner_pb_gatt_close(struct bt_conn *conn, u8_t reason);
  *
  * @return Zero - success, otherwise - fail
  */
-int provisioner_pb_gatt_recv(struct bt_conn *conn, struct net_buf_simple *buf);
+int provisioner_pb_gatt_recv(struct bt_mesh_conn *conn, struct net_buf_simple *buf);
 
 /**
  * @brief This function initializes provisioner's PB-GATT and PB-ADV
@@ -197,7 +193,7 @@ u16_t provisioner_srv_uuid_recv(struct net_buf_simple *buf);
  *
  * @return None
  */
-void provisioner_srv_data_recv(struct net_buf_simple *buf, const bt_addr_le_t *addr, u16_t uuid);
+void provisioner_srv_data_recv(struct net_buf_simple *buf, const bt_mesh_addr_t *addr, u16_t uuid);
 
 /**
  * @brief This function gets the bt_mesh_prov pointer.
@@ -376,6 +372,6 @@ u8_t bt_mesh_set_fast_prov_unicast_addr_range(u16_t min, u16_t max);
  */
 void bt_mesh_set_fast_prov_flags_iv_index(u8_t flags, u32_t iv_index);
 
-#endif /* CONFIG_BT_MESH_PROVISIONER */
+#endif /* CONFIG_BLE_MESH_PROVISIONER */
 
-#endif /* #ifndef _PROVISIONER_PROV_H_ */
+#endif /* _PROVISIONER_PROV_H_ */

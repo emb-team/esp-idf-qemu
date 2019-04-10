@@ -3,10 +3,10 @@
 # project subdirectory.
 #
 
-PROJECT_NAME := bt_mesh_fast_prov_client
+PROJECT_NAME := ble_mesh_fast_prov_client
 
 COMPONENT_ADD_INCLUDEDIRS := components/include
 
-EXTRA_COMPONENT_DIRS := $(IDF_PATH)/examples/bluetooth/ble_mesh/ble_mesh_vendor_models/fast_prov_vendor_model
+EXTRA_COMPONENT_DIRS := $(IDF_PATH)/examples/bluetooth/ble_mesh/ble_mesh_vendor_models/fast_prov_vendor_model/components
 
 include $(IDF_PATH)/make/project.mk

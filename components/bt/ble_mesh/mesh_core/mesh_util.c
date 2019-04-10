@@ -8,7 +8,6 @@
 
 #include <string.h>
 #include "sdkconfig.h"
-#if CONFIG_BT_MESH
 #include "mesh_util.h"
 #include "mesh_kernel.h"
 #include "mesh_aes_encrypt.h"
@@ -25,12 +24,12 @@ const char *bt_hex(const void *buf, size_t len)
     char *str;
     int i;
 
-    mask = irq_lock();
+    mask = bt_mesh_irq_lock();
     str = hexbufs[curbuf++];
     curbuf %= ARRAY_SIZE(hexbufs);
-    irq_unlock(mask);
+    bt_mesh_irq_unlock(mask);
 
-    len = min(len, (sizeof(hexbufs[0]) - 1) / 2);
+    len = MIN(len, (sizeof(hexbufs[0]) - 1) / 2);
 
     for (i = 0; i < len; i++) {
         str[i * 2]     = hex[b[i] >> 4];
@@ -85,5 +84,3 @@ int _compare(const uint8_t *a, const uint8_t *b, size_t size)
     }
     return result;
 }
-
-#endif /* #if CONFIG_BT_MESH */

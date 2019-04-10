@@ -7,26 +7,29 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#define TRANS_SEQ_AUTH_NVAL 0xffffffffffffffff
+#ifndef _TRANSPORT_H_
+#define _TRANSPORT_H_
 
-#define BT_MESH_TX_SEG_COUNT (CONFIG_BT_MESH_ADV_BUF_COUNT - 3)
-#define BT_MESH_TX_SDU_MAX (BT_MESH_TX_SEG_COUNT * 12)
+#define TRANS_SEQ_AUTH_NVAL             0xffffffffffffffff
 
-#define TRANS_CTL_OP_MASK              ((u8_t)BIT_MASK(7))
-#define TRANS_CTL_OP(data)             ((data)[0] & TRANS_CTL_OP_MASK)
-#define TRANS_CTL_HDR(op, seg)         ((op & TRANS_CTL_OP_MASK) | (seg << 7))
+#define BLE_MESH_TX_SEG_COUNT           (CONFIG_BLE_MESH_ADV_BUF_COUNT - 3)
+#define BLE_MESH_TX_SDU_MAX             (BLE_MESH_TX_SEG_COUNT * 12)
 
-#define TRANS_CTL_OP_ACK               0x00
-#define TRANS_CTL_OP_FRIEND_POLL       0x01
-#define TRANS_CTL_OP_FRIEND_UPDATE     0x02
-#define TRANS_CTL_OP_FRIEND_REQ        0x03
-#define TRANS_CTL_OP_FRIEND_OFFER      0x04
-#define TRANS_CTL_OP_FRIEND_CLEAR      0x05
-#define TRANS_CTL_OP_FRIEND_CLEAR_CFM  0x06
-#define TRANS_CTL_OP_FRIEND_SUB_ADD    0x07
-#define TRANS_CTL_OP_FRIEND_SUB_REM    0x08
-#define TRANS_CTL_OP_FRIEND_SUB_CFM    0x09
-#define TRANS_CTL_OP_HEARTBEAT         0x0a
+#define TRANS_CTL_OP_MASK               ((u8_t)BIT_MASK(7))
+#define TRANS_CTL_OP(data)              ((data)[0] & TRANS_CTL_OP_MASK)
+#define TRANS_CTL_HDR(op, seg)          ((op & TRANS_CTL_OP_MASK) | (seg << 7))
+
+#define TRANS_CTL_OP_ACK                0x00
+#define TRANS_CTL_OP_FRIEND_POLL        0x01
+#define TRANS_CTL_OP_FRIEND_UPDATE      0x02
+#define TRANS_CTL_OP_FRIEND_REQ         0x03
+#define TRANS_CTL_OP_FRIEND_OFFER       0x04
+#define TRANS_CTL_OP_FRIEND_CLEAR       0x05
+#define TRANS_CTL_OP_FRIEND_CLEAR_CFM   0x06
+#define TRANS_CTL_OP_FRIEND_SUB_ADD     0x07
+#define TRANS_CTL_OP_FRIEND_SUB_REM     0x08
+#define TRANS_CTL_OP_FRIEND_SUB_CFM     0x09
+#define TRANS_CTL_OP_HEARTBEAT          0x0a
 
 struct bt_mesh_ctl_friend_poll {
     u8_t  fsn;
@@ -65,7 +68,7 @@ struct bt_mesh_ctl_friend_clear_confirm {
     u16_t lpn_counter;
 } __packed;
 
-#define BT_MESH_FRIEND_SUB_MIN_LEN (1 + 2)
+#define BLE_MESH_FRIEND_SUB_MIN_LEN (1 + 2)
 struct bt_mesh_ctl_friend_sub {
     u8_t  xact;
     u16_t addr_list[5];
@@ -96,3 +99,5 @@ int bt_mesh_trans_recv(struct net_buf_simple *buf, struct bt_mesh_net_rx *rx);
 void bt_mesh_trans_init(void);
 
 void bt_mesh_rpl_clear(void);
+
+#endif /* _TRANSPORT_H_ */

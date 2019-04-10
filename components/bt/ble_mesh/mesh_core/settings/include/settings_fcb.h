@@ -5,11 +5,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef __SETTINGS_FCB_H_
-#define __SETTINGS_FCB_H_
+#ifndef _BLE_MESH_SETTINGS_FCB_H_
+#define _BLE_MESH_SETTINGS_FCB_H_
 
 #include "nvs.h"
-#include "include/settings.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -17,7 +16,6 @@ extern "C" {
 
 struct settings_fcb {
     struct settings_store cf_store;
-    const char *file_name;
     nvs_handle handle;
 };
 
@@ -27,13 +25,10 @@ struct settings_dup_check_arg {
     int is_dup;
 };
 
-extern int settings_fcb_src(struct settings_fcb *cf);
-extern int settings_fcb_dst(struct settings_fcb *cf);
-
 int csi_load_check(struct settings_dup_check_arg *cdca);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* __SETTINGS_FCB_H_ */
+#endif /* _BLE_MESH_SETTINGS_FCB_H_ */

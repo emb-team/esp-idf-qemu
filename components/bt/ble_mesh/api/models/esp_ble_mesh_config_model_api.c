@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <errno.h>
+#include <stdint.h>
 
 #include "btc/btc_task.h"
 #include "btc/btc_manage.h"
@@ -20,7 +20,7 @@
 #include "esp_bt_defs.h"
 #include "esp_bt_main.h"
 
-#include "btc_ble_mesh_config_client.h"
+#include "btc_ble_mesh_config_model.h"
 #include "esp_ble_mesh_config_model_api.h"
 
 esp_err_t esp_ble_mesh_register_config_client_callback(esp_ble_mesh_cfg_client_cb_t callback)
@@ -40,12 +40,12 @@ esp_err_t esp_ble_mesh_register_config_server_callback(esp_ble_mesh_cfg_server_c
 esp_err_t esp_ble_mesh_config_client_get_state(esp_ble_mesh_client_common_param_t *params,
         esp_ble_mesh_cfg_client_get_state_t *get_state)
 {
+    btc_ble_mesh_cfg_client_args_t arg = {0};
+    btc_msg_t msg = {0};
+
     if (!params || !params->model || !params->ctx.addr || !get_state) {
         return ESP_ERR_INVALID_ARG;
     }
-
-    btc_msg_t msg;
-    btc_ble_mesh_cfg_client_args_t arg;
 
     ESP_BLUEDROID_STATUS_CHECK(ESP_BLUEDROID_STATUS_ENABLED);
 
@@ -62,12 +62,12 @@ esp_err_t esp_ble_mesh_config_client_get_state(esp_ble_mesh_client_common_param_
 esp_err_t esp_ble_mesh_config_client_set_state(esp_ble_mesh_client_common_param_t *params,
         esp_ble_mesh_cfg_client_set_state_t *set_state)
 {
+    btc_ble_mesh_cfg_client_args_t arg = {0};
+    btc_msg_t msg = {0};
+
     if (!params || !params->model || !params->ctx.addr || !set_state) {
         return ESP_ERR_INVALID_ARG;
     }
-
-    btc_msg_t msg;
-    btc_ble_mesh_cfg_client_args_t arg;
 
     ESP_BLUEDROID_STATUS_CHECK(ESP_BLUEDROID_STATUS_ENABLED);
 

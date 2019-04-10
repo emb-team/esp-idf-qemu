@@ -7,32 +7,20 @@
 
 #include <string.h>
 
+#include "sdkconfig.h"
+
 #include "mesh_buf.h"
 #include "mesh_trace.h"
-#include "esp_bt_defs.h"
-#include "sdkconfig.h"
-#if CONFIG_BT_MESH
 
 /* Helpers to access the storage array, since we don't have access to its
  * type at this point anymore.
  */
-#define BUF_SIZE(pool) (sizeof(struct net_buf) + \
-            ROUND_UP(pool->buf_size, 4) + \
-            ROUND_UP(pool->user_data_size, 4))
+#define BUF_SIZE(pool) (sizeof(struct net_buf) +        \
+                        ROUND_UP(pool->buf_size, 4) +   \
+                        ROUND_UP(pool->user_data_size, 4))
+
 #define UNINIT_BUF(pool, n) (struct net_buf *)(((u8_t *)(pool->__bufs)) + \
-                           ((n) * BUF_SIZE(pool)))
-
-/* Linker-defined symbol bound to the static pool structs */
-struct net_buf_pool *net_buf_pool_get(int id)
-{
-    return (struct net_buf_pool *)id;
-}
-
-//static int pool_id(struct net_buf_pool *pool)
-//{
-//    BT_DBG("%s, the pool id = %p", __func__, pool);
-//  return (int)&pool[pool->buf_count - pool->uninit_count - 1];
-//}
+                            ((n) * BUF_SIZE(pool)))
 
 static inline struct net_buf *pool_get_uninit(struct net_buf_pool *pool,
         u16_t uninit_count)
@@ -43,8 +31,9 @@ static inline struct net_buf *pool_get_uninit(struct net_buf_pool *pool,
 
     buf->pool_id = pool;
     buf->size = pool->buf_size;
-    BT_DBG("%s, pool_id =  %p, uninit_count = %d, pool->buf_count = %d, buf = %p, buf->size = %d, pool = %p",
-           __func__, buf->pool_id, uninit_count, pool->buf_count, buf, buf->size, pool);
+
+    NET_BUF_DBG("%s, pool_id =  %p, uninit_count = %d, pool->buf_count = %d, buf = %p, buf->size = %d, pool = %p",
+                __func__, buf->pool_id, uninit_count, pool->buf_count, buf, buf->size, pool);
 
     return buf;
 }
@@ -222,8 +211,8 @@ void net_buf_reset(struct net_buf *buf)
     NET_BUF_ASSERT(buf->flags == 0);
     NET_BUF_ASSERT(buf->frags == NULL);
 
-    buf->len   = 0;
-    buf->data  = buf->__buf;
+    buf->len  = 0;
+    buf->data = buf->__buf;
 }
 
 void net_buf_reserve(struct net_buf *buf, size_t reserve)
@@ -247,9 +236,9 @@ void net_buf_slist_put(sys_slist_t *list, struct net_buf *buf)
         tail->flags |= NET_BUF_FRAGS;
     }
 
-    key = irq_lock();
+    key = bt_mesh_irq_lock();
     sys_slist_append_list(list, &buf->node, &tail->node);
-    irq_unlock(key);
+    bt_mesh_irq_unlock(key);
 }
 
 struct net_buf *net_buf_slist_get(sys_slist_t *list)
@@ -259,9 +248,9 @@ struct net_buf *net_buf_slist_get(sys_slist_t *list)
 
     NET_BUF_ASSERT(list);
 
-    key = irq_lock();
+    key = bt_mesh_irq_lock();
     buf = (void *)sys_slist_get(list);
-    irq_unlock(key);
+    bt_mesh_irq_unlock(key);
 
     if (!buf) {
         return NULL;
@@ -269,9 +258,9 @@ struct net_buf *net_buf_slist_get(sys_slist_t *list)
 
     /* Get any fragments belonging to this buffer */
     for (frag = buf; (frag->flags & NET_BUF_FRAGS); frag = frag->frags) {
-        key = irq_lock();
+        key = bt_mesh_irq_lock();
         frag->frags = (void *)sys_slist_get(list);
-        irq_unlock(key);
+        bt_mesh_irq_unlock(key);
 
         NET_BUF_ASSERT(frag->frags);
 
@@ -285,23 +274,6 @@ struct net_buf *net_buf_slist_get(sys_slist_t *list)
     return buf;
 }
 
-void net_buf_put(struct k_fifo *fifo, struct net_buf *buf)
-{
-    struct net_buf *tail;
-
-    //NET_BUF_ASSERT(fifo);
-    //NET_BUF_ASSERT(buf);
-
-    //ble_mesh_msg_t msg = {0};
-
-    //ble_mesh_task_post(ble_mesh_msg_t *msg, 0);
-    for (tail = buf; tail->frags; tail = tail->frags) {
-        tail->flags |= NET_BUF_FRAGS;
-    }
-
-    //k_fifo_put_list(fifo, buf, tail);
-}
-
 struct net_buf *net_buf_ref(struct net_buf *buf)
 {
     NET_BUF_ASSERT(buf);
@@ -312,83 +284,7 @@ struct net_buf *net_buf_ref(struct net_buf *buf)
     return buf;
 }
 
-struct net_buf *net_buf_clone(struct net_buf *buf, s32_t timeout)
-{
-    struct net_buf_pool *pool;
-    struct net_buf *clone;
-
-    NET_BUF_ASSERT(buf);
-
-    pool = buf->pool_id;//net_buf_pool_get(buf->pool_id);
-
-    clone = net_buf_alloc(pool, timeout);
-    if (!clone) {
-        return NULL;
-    }
-
-    net_buf_reserve(clone, net_buf_headroom(buf));
-
-    /* TODO: Add reference to the original buffer instead of copying it. */
-    memcpy(net_buf_add(clone, buf->len), buf->data, buf->len);
-
-    return clone;
-}
-
-struct net_buf *net_buf_frag_last(struct net_buf *buf)
-{
-    NET_BUF_ASSERT(buf);
-
-    while (buf->frags) {
-        buf = buf->frags;
-    }
-
-    return buf;
-}
-
-void net_buf_frag_insert(struct net_buf *parent, struct net_buf *frag)
-{
-    NET_BUF_ASSERT(parent);
-    NET_BUF_ASSERT(frag);
-
-    if (parent->frags) {
-        net_buf_frag_last(frag)->frags = parent->frags;
-    }
-    /* Take ownership of the fragment reference */
-    parent->frags = frag;
-}
-
-#if defined(CONFIG_NET_BUF_LOG)
-struct net_buf *net_buf_frag_del_debug(struct net_buf *parent,
-                                       struct net_buf *frag,
-                                       const char *func, int line)
-#else
-struct net_buf *net_buf_frag_del(struct net_buf *parent, struct net_buf *frag)
-#endif
-{
-    struct net_buf *next_frag;
-
-    NET_BUF_ASSERT(frag);
-
-    if (parent) {
-        NET_BUF_ASSERT(parent->frags);
-        NET_BUF_ASSERT(parent->frags == frag);
-        parent->frags = frag->frags;
-    }
-
-    next_frag = frag->frags;
-
-    frag->frags = NULL;
-
-#if defined(CONFIG_NET_BUF_LOG)
-    net_buf_unref_debug(frag, func, line);
-#else
-    net_buf_unref(frag);
-#endif
-
-    return next_frag;
-}
-
-#if defined(CONFIG_NET_BUF_LOG)
+#if defined(CONFIG_BLE_MESH_NET_BUF_LOG)
 void net_buf_unref_debug(struct net_buf *buf, const char *func, int line)
 #else
 void net_buf_unref(struct net_buf *buf)
@@ -400,7 +296,7 @@ void net_buf_unref(struct net_buf *buf)
         struct net_buf *frags = buf->frags;
         struct net_buf_pool *pool;
 
-#if defined(CONFIG_NET_BUF_LOG)
+#if defined(CONFIG_BLE_MESH_NET_BUF_LOG)
         if (!buf->ref) {
             NET_BUF_ERR("%s():%d: buf %p double free", func, line,
                         buf);
@@ -417,26 +313,24 @@ void net_buf_unref(struct net_buf *buf)
 
         buf->frags = NULL;
 
-        pool = buf->pool_id;//net_buf_pool_get(buf->pool_id);
+        pool = buf->pool_id;
         pool->uninit_count++;
-#if defined(CONFIG_NET_BUF_POOL_USAGE)
+#if defined(CONFIG_BLE_MESH_NET_BUF_POOL_USAGE)
         pool->avail_count++;
-        BT_DBG("%s, pool->avail_count = %d, pool->uninit_count = %d", __func__,
-               pool->avail_count, pool->uninit_count);
+        NET_BUF_DBG("%s, pool->avail_count = %d, pool->uninit_count = %d", __func__,
+                    pool->avail_count, pool->uninit_count);
         NET_BUF_ASSERT(pool->avail_count <= pool->buf_count);
 #endif
 
         if (pool->destroy) {
             pool->destroy(buf);
-        } else {
-            net_buf_destroy(buf);
         }
 
         buf = frags;
     }
 }
 
-#if defined(CONFIG_NET_BUF_LOG)
+#if defined(CONFIG_BLE_MESH_NET_BUF_LOG)
 struct net_buf *net_buf_alloc_debug(struct net_buf_pool *pool, s32_t timeout,
                                     const char *func, int line)
 #else
@@ -450,12 +344,12 @@ struct net_buf *net_buf_alloc(struct net_buf_pool *pool, s32_t timeout)
     NET_BUF_ASSERT(pool);
 
     NET_BUF_DBG("%s():%d: pool %p timeout %d", func, line, pool, timeout);
-    BT_DBG("%s, pool = %p , pool->uninit_count= %d, buf_count = %d", __func__,
-           pool, pool->uninit_count, pool->buf_count);
+    NET_BUF_DBG("%s, pool = %p , pool->uninit_count= %d, buf_count = %d", __func__,
+                pool, pool->uninit_count, pool->buf_count);
     /* We need to lock interrupts temporarily to prevent race conditions
      * when accessing pool->uninit_count.
      */
-    key = irq_lock();
+    key = bt_mesh_irq_lock();
 
     /* If there are uninitialized buffers we're guaranteed to succeed
      * with the allocation one way or another.
@@ -468,28 +362,9 @@ struct net_buf *net_buf_alloc(struct net_buf_pool *pool, s32_t timeout)
                 goto success;
             }
         }
-        // u16_t uninit_count;
-
-        /* If this is not the first access to the pool, we can
-         * be opportunistic and try to fetch a previously used
-         * buffer from the LIFO with K_NO_WAIT.
-         */
-        //if (pool->uninit_count < pool->buf_count) {
-        //  buf = &pool->__bufs[pool->buf_count - pool->uninit_count];
-        //if (buf) {
-        //  irq_unlock(key);
-        //  goto success;
-        //}
-        //}
-
-        // uninit_count = pool->uninit_count--;
-        // irq_unlock(key);
-
-        // buf = pool_get_uninit(pool, uninit_count);
-        // goto success;
     }
 
-    irq_unlock(key);
+    bt_mesh_irq_unlock(key);
 
     if (!buf) {
         BT_ERR("%s():Failed to get free buffer", __func__);
@@ -498,7 +373,7 @@ struct net_buf *net_buf_alloc(struct net_buf_pool *pool, s32_t timeout)
 
 success:
     NET_BUF_DBG("allocated buf %p", buf);
-    irq_unlock(key);
+    bt_mesh_irq_unlock(key);
 
     buf->ref   = 1;
     buf->index = pool->buf_count - i;
@@ -507,22 +382,10 @@ success:
     net_buf_reset(buf);
 
     pool->uninit_count--;
-#if defined(CONFIG_NET_BUF_POOL_USAGE)
+#if defined(CONFIG_BLE_MESH_NET_BUF_POOL_USAGE)
     pool->avail_count--;
     NET_BUF_ASSERT(pool->avail_count >= 0);
 #endif
 
     return buf;
 }
-
-int net_buf_id(struct net_buf *buf)
-{
-    struct net_buf_pool *pool = buf->pool_id;//net_buf_pool_get(buf->pool_id);
-    u8_t *pool_start = (u8_t *)pool->__bufs;
-    u8_t *buf_ptr = (u8_t *)buf;
-
-    return (buf_ptr - pool_start) / BUF_SIZE(pool);
-}
-
-#endif /* #if CONFIG_BT_MESH */
-

@@ -178,7 +178,7 @@ void ble_mesh_model_cb(esp_ble_mesh_model_cb_event_t event, esp_ble_mesh_model_c
     switch (event) {
     case ESP_BLE_MESH_MODEL_OPERATION_EVT:
         if (param->model_operation.model != NULL && param->model_operation.model->op != NULL) {
-            if (param->model_operation.opcode == BT_MESH_MODEL_OP_GEN_ONOFF_GET) {
+            if (param->model_operation.opcode == ESP_BLE_MESH_MODEL_OP_GEN_ONOFF_GET) {
                 ESP_LOGI(TAG, "Node:GetStatus,Success");
                 ble_mesh_node_get_state(status);
                 esp_ble_mesh_server_model_send_msg(param->model_operation.model, param->model_operation.ctx, ESP_BLE_MESH_MODEL_OP_GEN_ONOFF_STATUS,

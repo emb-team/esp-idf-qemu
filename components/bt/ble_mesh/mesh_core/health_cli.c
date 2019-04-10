@@ -11,19 +11,18 @@
 #include <errno.h>
 #include <stdbool.h>
 
+#include "osi/allocator.h"
+#include "sdkconfig.h"
+#define BT_DBG_ENABLED IS_ENABLED(CONFIG_BLE_MESH_DEBUG_MODEL)
+
 #include "mesh_types.h"
 #include "mesh_util.h"
-#include "sdkconfig.h"
-#include "osi/allocator.h"
-
-#if CONFIG_BT_MESH
-
-#define BT_DBG_ENABLED IS_ENABLED(CONFIG_BT_MESH_DEBUG_MODEL)
 #include "mesh_trace.h"
 #include "health_cli.h"
+
 #include "foundation.h"
-#include "common.h"
-#include "btc_ble_mesh_health.h"
+#include "mesh_common.h"
+#include "btc_ble_mesh_health_model.h"
 
 s32_t health_msg_timeout;
 
@@ -41,27 +40,27 @@ static const bt_mesh_client_op_pair_t health_op_pair[] = {
 
 static void timeout_handler(struct k_work *work)
 {
-    bt_mesh_health_client_t *client   = NULL;
-    health_internal_data_t  *internal = NULL;
-    bt_mesh_client_node_t   *node     = NULL;
+    health_internal_data_t *internal = NULL;
+    bt_mesh_health_client_t *client = NULL;
+    bt_mesh_client_node_t *node = NULL;
 
     BT_WARN("Receive health status message timeout");
 
     node = CONTAINER_OF(work, bt_mesh_client_node_t, timer.work);
     if (!node || !node->ctx.model) {
-        BT_ERR("%s: node parameter is NULL", __func__);
+        BT_ERR("%s, Invalid parameter", __func__);
         return;
     }
 
     client = (bt_mesh_health_client_t *)node->ctx.model->user_data;
     if (!client) {
-        BT_ERR("%s: model user_data is NULL", __func__);
+        BT_ERR("%s, Health Client user_data is NULL", __func__);
         return;
     }
 
     internal = (health_internal_data_t *)client->internal_data;
     if (!internal) {
-        BT_ERR("%s: internal_data is NULL", __func__);
+        BT_ERR("%s, Health Client internal_data is NULL", __func__);
         return;
     }
 
@@ -78,18 +77,18 @@ static void health_client_cancel(struct bt_mesh_model *model,
                                  void *status, size_t len)
 {
     health_internal_data_t *data = NULL;
-    bt_mesh_client_node_t  *node = NULL;
+    bt_mesh_client_node_t *node = NULL;
     struct net_buf_simple buf = {0};
     u8_t evt_type = 0xFF;
 
     if (!model || !ctx || !status || !len) {
-        BT_ERR("%s: invalid parameter", __func__);
+        BT_ERR("%s, Invalid parameter", __func__);
         return;
     }
 
     data = (health_internal_data_t *)health_cli->internal_data;
     if (!data) {
-        BT_ERR("%s: health client internal_data is NULL", __func__);
+        BT_ERR("%s, Health Client internal_data is NULL", __func__);
         return;
     }
 
@@ -145,10 +144,10 @@ static void health_fault_status(struct bt_mesh_model *model,
            bt_hex(buf->data, buf->len));
 
     status.test_id = net_buf_simple_pull_u8(buf);
-    status.cid     = net_buf_simple_pull_le16(buf);
+    status.cid = net_buf_simple_pull_le16(buf);
     status.fault_array = bt_mesh_alloc_buf(buf->len);
     if (!status.fault_array) {
-        BT_ERR("%s: allocate memory for fault_array fail", __func__);
+        BT_ERR("%s, Failed to allocate memory", __func__);
         return;
     }
 
@@ -163,7 +162,7 @@ static void health_current_status(struct bt_mesh_model *model,
                                   struct net_buf_simple *buf)
 {
     bt_mesh_client_node_t *node = NULL;
-    u8_t  test_id;
+    u8_t test_id;
     u16_t cid;
 
     BT_DBG("net_idx 0x%04x app_idx 0x%04x src 0x%04x len %u: %s",
@@ -176,7 +175,7 @@ static void health_current_status(struct bt_mesh_model *model,
     }
 
     test_id = net_buf_simple_pull_u8(buf);
-    cid     = net_buf_simple_pull_le16(buf);
+    cid = net_buf_simple_pull_le16(buf);
 
     BT_DBG("Test ID 0x%02x Company ID 0x%04x Fault Count %u",
            test_id, cid, buf->len);
@@ -217,7 +216,7 @@ const struct bt_mesh_model_op bt_mesh_health_cli_op[] = {
     { OP_HEALTH_CURRENT_STATUS, 3, health_current_status   },
     { OP_HEALTH_PERIOD_STATUS,  1, health_period_status    },
     { OP_ATTENTION_STATUS,      1, health_attention_status },
-    BT_MESH_MODEL_OP_END,
+    BLE_MESH_MODEL_OP_END,
 };
 
 int bt_mesh_health_attention_get(struct bt_mesh_msg_ctx *ctx)
@@ -235,7 +234,7 @@ int bt_mesh_health_attention_get(struct bt_mesh_msg_ctx *ctx)
                                   msg, timeout_handler, health_msg_timeout,
                                   true, NULL, NULL);
     if (err) {
-        BT_ERR("%s: send failed (err %d)", __func__, err);
+        BT_ERR("%s, send failed (err %d)", __func__, err);
     }
 
     return err;
@@ -246,7 +245,7 @@ int bt_mesh_health_attention_set(struct bt_mesh_msg_ctx *ctx,
 {
     struct net_buf_simple *msg = NET_BUF_SIMPLE(2 + 1 + 4);
     u32_t opcode;
-    int   err;
+    int err;
 
     if (!ctx || !ctx->addr) {
         return -EINVAL;
@@ -264,7 +263,7 @@ int bt_mesh_health_attention_set(struct bt_mesh_msg_ctx *ctx,
                                   timeout_handler, health_msg_timeout,
                                   need_ack, NULL, NULL);
     if (err) {
-        BT_ERR("%s: send failed (err %d)", __func__, err);
+        BT_ERR("%s, send failed (err %d)", __func__, err);
     }
 
     return err;
@@ -285,7 +284,7 @@ int bt_mesh_health_period_get(struct bt_mesh_msg_ctx *ctx)
                                   ctx, msg, timeout_handler, health_msg_timeout,
                                   true, NULL, NULL);
     if (err) {
-        BT_ERR("%s: send failed (err %d)", __func__, err);
+        BT_ERR("%s, send failed (err %d)", __func__, err);
     }
 
     return err;
@@ -296,7 +295,7 @@ int bt_mesh_health_period_set(struct bt_mesh_msg_ctx *ctx,
 {
     struct net_buf_simple *msg = NET_BUF_SIMPLE(2 + 1 + 4);
     u32_t opcode;
-    int   err;
+    int err;
 
     if (!ctx || !ctx->addr) {
         return -EINVAL;
@@ -314,7 +313,7 @@ int bt_mesh_health_period_set(struct bt_mesh_msg_ctx *ctx,
                                   timeout_handler, health_msg_timeout,
                                   need_ack, NULL, NULL);
     if (err) {
-        BT_ERR("%s: send failed (err %d)", __func__, err);
+        BT_ERR("%s, send failed (err %d)", __func__, err);
     }
 
     return err;
@@ -325,7 +324,7 @@ int bt_mesh_health_fault_test(struct bt_mesh_msg_ctx *ctx,
 {
     struct net_buf_simple *msg = NET_BUF_SIMPLE(2 + 3 + 4);
     u32_t opcode;
-    int   err;
+    int err;
 
     if (!ctx || !ctx->addr) {
         return -EINVAL;
@@ -344,7 +343,7 @@ int bt_mesh_health_fault_test(struct bt_mesh_msg_ctx *ctx,
                                   timeout_handler, health_msg_timeout,
                                   need_ack, NULL, NULL);
     if (err) {
-        BT_ERR("%s: send failed (err %d)", __func__, err);
+        BT_ERR("%s, send failed (err %d)", __func__, err);
     }
 
     return err;
@@ -355,7 +354,7 @@ int bt_mesh_health_fault_clear(struct bt_mesh_msg_ctx *ctx,
 {
     struct net_buf_simple *msg = NET_BUF_SIMPLE(2 + 2 + 4);
     u32_t opcode;
-    int   err;
+    int err;
 
     if (!ctx || !ctx->addr) {
         return -EINVAL;
@@ -373,7 +372,7 @@ int bt_mesh_health_fault_clear(struct bt_mesh_msg_ctx *ctx,
                                   timeout_handler, health_msg_timeout,
                                   need_ack, NULL, NULL);
     if (err) {
-        BT_ERR("%s: send failed (err %d)", __func__, err);
+        BT_ERR("%s, send failed (err %d)", __func__, err);
     }
 
     return err;
@@ -395,7 +394,7 @@ int bt_mesh_health_fault_get(struct bt_mesh_msg_ctx *ctx, u16_t cid)
                                   msg, timeout_handler, health_msg_timeout,
                                   true, NULL, NULL);
     if (err) {
-        BT_ERR("%s: send failed (err %d)", __func__, err);
+        BT_ERR("%s, send failed (err %d)", __func__, err);
     }
 
     return err;
@@ -414,7 +413,7 @@ void bt_mesh_health_cli_timeout_set(s32_t timeout)
 int bt_mesh_health_cli_set(struct bt_mesh_model *model)
 {
     if (!model || !model->user_data) {
-        BT_ERR("No Health Client context for given model");
+        BT_ERR("%s, No Health Client context for given model", __func__);
         return -EINVAL;
     }
 
@@ -425,34 +424,34 @@ int bt_mesh_health_cli_set(struct bt_mesh_model *model)
 
 int bt_mesh_health_cli_init(struct bt_mesh_model *model, bool primary)
 {
-    bt_mesh_health_client_t *client   = NULL;
-    health_internal_data_t  *internal = NULL;
+    health_internal_data_t *internal = NULL;
+    bt_mesh_health_client_t *client = NULL;
 
     BT_DBG("primary %u", primary);
 
     if (!model) {
-        BT_ERR("Health Client model is NULL");
+        BT_ERR("%s, Invalid parameter", __func__);
         return -EINVAL;
     }
 
     client = (bt_mesh_health_client_t *)model->user_data;
     if (!client) {
-        BT_ERR("No Health Client context provided");
+        BT_ERR("%s, No Health Client context provided", __func__);
         return -EINVAL;
     }
 
     /* TODO: call osi_free() when deinit function is invoked*/
     internal = osi_calloc(sizeof(health_internal_data_t));
     if (!internal) {
-        BT_ERR("Allocate memory for Health Client internal data fail");
+        BT_ERR("%s, Failed to allocate memory", __func__);
         return -ENOMEM;
     }
 
     sys_slist_init(&internal->queue);
 
-    client->model         = model;
-    client->op_pair_size  = ARRAY_SIZE(health_op_pair);
-    client->op_pair       = health_op_pair;
+    client->model = model;
+    client->op_pair_size = ARRAY_SIZE(health_op_pair);
+    client->op_pair = health_op_pair;
     client->internal_data = internal;
 
     /* Set the default health client pointer */
@@ -462,5 +461,3 @@ int bt_mesh_health_cli_init(struct bt_mesh_model *model, bool primary)
 
     return 0;
 }
-
-#endif /* #if CONFIG_BT_MESH */

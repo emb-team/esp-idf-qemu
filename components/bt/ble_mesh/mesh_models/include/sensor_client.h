@@ -16,18 +16,18 @@
  *  @brief Bluetooth Mesh Sensor Client Model APIs.
  */
 
-#ifndef __BT_MESH_SENSOR_CLI_H
-#define __BT_MESH_SENSOR_CLI_H
+#ifndef _SENSOR_CLIENT_H_
+#define _SENSOR_CLIENT_H_
 
 #include "mesh_access.h"
 #include "mesh_kernel.h"
-#include "common.h"
-#include "bt_mesh_client_common.h"
+
+#include "model_common.h"
 
 /* Sensor Client Model Context */
 extern const struct bt_mesh_model_op sensor_cli_op[];
 
-/** @def BT_MESH_MODEL_SENSOR_CLI
+/** @def BLE_MESH_MODEL_SENSOR_CLI
  *
  *  Define a new sensor client model. Note that this API needs to
  *  be repeated for each element which the application wants to
@@ -37,8 +37,8 @@ extern const struct bt_mesh_model_op sensor_cli_op[];
  *
  *  @return New sensor client model instance.
  */
-#define BT_MESH_MODEL_SENSOR_CLI(cli_pub, cli_data) \
-        BT_MESH_MODEL(BT_MESH_MODEL_ID_SENSOR_CLI,  \
+#define BLE_MESH_MODEL_SENSOR_CLI(cli_pub, cli_data)    \
+        BLE_MESH_MODEL(BLE_MESH_MODEL_ID_SENSOR_CLI,    \
                     sensor_cli_op, cli_pub, cli_data)
 
 typedef bt_mesh_client_common_t bt_mesh_sensor_client_t;
@@ -164,4 +164,4 @@ int bt_mesh_sensor_client_get_state(struct bt_mesh_common_param *common, void *g
  */
 int bt_mesh_sensor_client_set_state(struct bt_mesh_common_param *common, void *set, void *status);
 
-#endif /* __BT_MESH_SENSOR_CLI_H */
+#endif /* _SENSOR_CLIENT_H_ */

@@ -23,24 +23,25 @@
 #include "esp_ble_mesh_config_model_api.h"
 #include "esp_ble_mesh_generic_model_api.h"
 
-#include "board.h"
-
 #define TAG "ble_mesh_provisioner"
 
-#define CID_ESP         0x02E5
-#define CID_NVAL        0xFFFF
+#define LED_OFF             0x0
+#define LED_ON              0x1
 
-#define PROVISIONER_OWN_ADDR    0x0001
+#define CID_ESP             0x02E5
+#define CID_NVAL            0xFFFF
 
-#define MSG_SEND_TTL            3
-#define MSG_SEND_REL            false
-#define MSG_TIMEOUT             0
-#define MSG_ROLE                ROLE_PROVISIONER
+#define PROV_OWN_ADDR       0x0001
 
-#define COMPOSITION_DATA_PAGE_0 0x00
+#define MSG_SEND_TTL        3
+#define MSG_SEND_REL        false
+#define MSG_TIMEOUT         0
+#define MSG_ROLE            ROLE_PROVISIONER
 
-#define ESP_BLE_MESH_APP_IDX    0x0000
-#define APP_KEY_OCTET           0x12
+#define COMP_DATA_PAGE_0    0x00
+
+#define APP_KEY_IDX         0x0000
+#define APP_KEY_OCTET       0x12
 
 static uint8_t dev_uuid[16];
 
@@ -51,8 +52,8 @@ typedef struct {
     uint8_t  onoff;
 } esp_ble_mesh_node_info_t;
 
-static esp_ble_mesh_node_info_t nodes[CONFIG_BT_MESH_MAX_PROV_NODES] = {
-    [0 ... (CONFIG_BT_MESH_MAX_PROV_NODES - 1)] = {
+static esp_ble_mesh_node_info_t nodes[CONFIG_BLE_MESH_MAX_PROV_NODES] = {
+    [0 ... (CONFIG_BLE_MESH_MAX_PROV_NODES - 1)] = {
         .unicast = ESP_BLE_MESH_ADDR_UNASSIGNED,
         .elem_num = 0,
         .onoff = LED_OFF,
@@ -71,12 +72,12 @@ static esp_ble_mesh_client_t onoff_client;
 static esp_ble_mesh_cfg_srv_t config_server = {
     .relay = ESP_BLE_MESH_RELAY_DISABLED,
     .beacon = ESP_BLE_MESH_BEACON_ENABLED,
-#if defined(CONFIG_BT_MESH_FRIEND)
+#if defined(CONFIG_BLE_MESH_FRIEND)
     .friend_state = ESP_BLE_MESH_FRIEND_ENABLED,
 #else
     .friend_state = ESP_BLE_MESH_FRIEND_NOT_SUPPORTED,
 #endif
-#if defined(CONFIG_BT_MESH_GATT_PROXY)
+#if defined(CONFIG_BLE_MESH_GATT_PROXY)
     .gatt_proxy = ESP_BLE_MESH_GATT_PROXY_ENABLED,
 #else
     .gatt_proxy = ESP_BLE_MESH_GATT_PROXY_NOT_SUPPORTED,
@@ -105,7 +106,7 @@ static esp_ble_mesh_comp_t composition = {
 
 static esp_ble_mesh_prov_t provision = {
     .prov_uuid           = dev_uuid,
-    .prov_unicast_addr   = PROVISIONER_OWN_ADDR,
+    .prov_unicast_addr   = PROV_OWN_ADDR,
     .prov_start_address  = 0x0005,
     .prov_attention      = 0x00,
     .prov_algorithm      = 0x00,
@@ -221,7 +222,7 @@ static esp_err_t prov_complete(int node_idx, const esp_ble_mesh_octet16_t uuid,
     }
 
     esp_ble_mesh_set_msg_common(&common, node, config_client.model, ESP_BLE_MESH_MODEL_OP_COMPOSITION_DATA_GET);
-    get_state.comp_data_get.page = COMPOSITION_DATA_PAGE_0;
+    get_state.comp_data_get.page = COMP_DATA_PAGE_0;
     err = esp_ble_mesh_config_client_get_state(&common, &get_state);
     if (err) {
         ESP_LOGE(TAG, "%s: Send config comp data get failed", __func__);
@@ -325,7 +326,7 @@ static void esp_ble_mesh_prov_cb(esp_ble_mesh_prov_cb_event_t event,
         if (param->provisioner_add_app_key_comp.err_code == ESP_OK) {
             esp_err_t err = 0;
             prov_key.app_idx = param->provisioner_add_app_key_comp.app_idx;
-            err = esp_ble_mesh_provisioner_bind_app_key_to_local_model(PROVISIONER_OWN_ADDR, prov_key.app_idx,
+            err = esp_ble_mesh_provisioner_bind_app_key_to_local_model(PROV_OWN_ADDR, prov_key.app_idx,
                     ESP_BLE_MESH_MODEL_ID_GEN_ONOFF_CLI, CID_NVAL);
             if (err != ESP_OK) {
                 ESP_LOGE(TAG, "Provisioner bind local model appkey failed");
@@ -454,7 +455,7 @@ static void esp_ble_mesh_config_client_cb(esp_ble_mesh_cfg_client_cb_event_t eve
         case ESP_BLE_MESH_MODEL_OP_COMPOSITION_DATA_GET: {
             esp_ble_mesh_cfg_client_get_state_t get_state = {0};
             esp_ble_mesh_set_msg_common(&common, node, config_client.model, ESP_BLE_MESH_MODEL_OP_COMPOSITION_DATA_GET);
-            get_state.comp_data_get.page = COMPOSITION_DATA_PAGE_0;
+            get_state.comp_data_get.page = COMP_DATA_PAGE_0;
             err = esp_ble_mesh_config_client_get_state(&common, &get_state);
             if (err) {
                 ESP_LOGE(TAG, "%s: Config Composition Data Get failed", __func__);
@@ -604,7 +605,7 @@ static int ble_mesh_init(void)
     int err = 0;
 
     prov_key.net_idx = ESP_BLE_MESH_KEY_PRIMARY;
-    prov_key.app_idx = ESP_BLE_MESH_APP_IDX;
+    prov_key.app_idx = APP_KEY_IDX;
     memset(prov_key.app_key, APP_KEY_OCTET, sizeof(prov_key.app_key));
 
     memcpy(dev_uuid, esp_bt_dev_get_address(), ESP_BD_ADDR_LEN);
@@ -675,8 +676,6 @@ void app_main(void)
     int err;
 
     ESP_LOGI(TAG, "Initializing...");
-
-    board_init();
 
     err = bluetooth_init();
     if (err) {

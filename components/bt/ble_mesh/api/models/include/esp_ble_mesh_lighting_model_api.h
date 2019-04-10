@@ -19,7 +19,7 @@
 #ifndef _ESP_BLE_MESH_LIGHTING_MODEL_API_H_
 #define _ESP_BLE_MESH_LIGHTING_MODEL_API_H_
 
-#include "light_client.h"
+#include "lighting_client.h"
 #include "esp_ble_mesh_defs.h"
 
 /** @def    ESP_BLE_MESH_MODEL_LIGHT_LIGHTNESS_CLI

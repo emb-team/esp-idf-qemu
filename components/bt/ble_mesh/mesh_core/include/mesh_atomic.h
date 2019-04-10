@@ -6,87 +6,22 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef __ATOMIC_H__
-#define __ATOMIC_H__
+#ifndef _BLE_MESH_ATOMIC_H_
+#define _BLE_MESH_ATOMIC_H_
+
+#include "mesh_types.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-typedef int atomic_t;
-typedef atomic_t atomic_val_t;
+typedef bt_mesh_atomic_t bt_mesh_atomic_val_t;
 
 /**
  * @defgroup atomic_apis Atomic Services APIs
  * @ingroup kernel_apis
  * @{
  */
-
-/**
- * @brief Atomic compare-and-set.
- *
- * This routine performs an atomic compare-and-set on @a target. If the current
- * value of @a target equals @a old_value, @a target is set to @a new_value.
- * If the current value of @a target does not equal @a old_value, @a target
- * is left unchanged.
- *
- * @param target Address of atomic variable.
- * @param old_value Original value to compare against.
- * @param new_value New value to store.
- * @return 1 if @a new_value is written, 0 otherwise.
- */
-#ifdef CONFIG_ATOMIC_OPERATIONS_BUILTIN
-static inline int atomic_cas(atomic_t *target, atomic_val_t old_value,
-                             atomic_val_t new_value)
-{
-    return __atomic_compare_exchange_n(target, &old_value, new_value,
-                                       0, __ATOMIC_SEQ_CST,
-                                       __ATOMIC_SEQ_CST);
-}
-#else
-extern int atomic_cas(atomic_t *target, atomic_val_t old_value,
-                      atomic_val_t new_value);
-#endif
-
-/**
- *
- * @brief Atomic addition.
- *
- * This routine performs an atomic addition on @a target.
- *
- * @param target Address of atomic variable.
- * @param value Value to add.
- *
- * @return Previous value of @a target.
- */
-#ifdef CONFIG_ATOMIC_OPERATIONS_BUILTIN
-static inline atomic_val_t atomic_add(atomic_t *target, atomic_val_t value)
-{
-    return __atomic_fetch_add(target, value, __ATOMIC_SEQ_CST);
-}
-#else
-extern atomic_val_t atomic_add(atomic_t *target, atomic_val_t value);
-#endif
-
-/**
- *
- * @brief Atomic subtraction.
- *
- * This routine performs an atomic subtraction on @a target.
- *
- * @param target Address of atomic variable.
- * @param value Value to subtract.
- *
- * @return Previous value of @a target.
- */
-#ifdef CONFIG_ATOMIC_OPERATIONS_BUILTIN
-static inline atomic_val_t atomic_sub(atomic_t *target, atomic_val_t value)
-{
-    return __atomic_fetch_sub(target, value, __ATOMIC_SEQ_CST);
-}
-#else
-extern atomic_val_t atomic_sub(atomic_t *target, atomic_val_t value);
-#endif
 
 /**
  *
@@ -99,12 +34,12 @@ extern atomic_val_t atomic_sub(atomic_t *target, atomic_val_t value);
  * @return Previous value of @a target.
  */
 #ifdef CONFIG_ATOMIC_OPERATIONS_BUILTIN
-static inline atomic_val_t atomic_inc(atomic_t *target)
+static inline bt_mesh_atomic_val_t bt_mesh_atomic_inc(bt_mesh_atomic_t *target)
 {
-    return atomic_add(target, 1);
+    return bt_mesh_atomic_add(target, 1);
 }
 #else
-extern atomic_val_t atomic_inc(atomic_t *target);
+extern bt_mesh_atomic_val_t bt_mesh_atomic_inc(bt_mesh_atomic_t *target);
 #endif
 
 /**
@@ -118,12 +53,12 @@ extern atomic_val_t atomic_inc(atomic_t *target);
  * @return Previous value of @a target.
  */
 #ifdef CONFIG_ATOMIC_OPERATIONS_BUILTIN
-static inline atomic_val_t atomic_dec(atomic_t *target)
+static inline bt_mesh_atomic_val_t bt_mesh_atomic_dec(bt_mesh_atomic_t *target)
 {
-    return atomic_sub(target, 1);
+    return bt_mesh_atomic_sub(target, 1);
 }
 #else
-extern atomic_val_t atomic_dec(atomic_t *target);
+extern bt_mesh_atomic_val_t bt_mesh_atomic_dec(bt_mesh_atomic_t *target);
 #endif
 
 /**
@@ -137,12 +72,12 @@ extern atomic_val_t atomic_dec(atomic_t *target);
  * @return Value of @a target.
  */
 #ifdef CONFIG_ATOMIC_OPERATIONS_BUILTIN
-static inline atomic_val_t atomic_get(const atomic_t *target)
+static inline bt_mesh_atomic_val_t bt_mesh_atomic_get(const bt_mesh_atomic_t *target)
 {
     return __atomic_load_n(target, __ATOMIC_SEQ_CST);
 }
 #else
-extern atomic_val_t atomic_get(const atomic_t *target);
+extern bt_mesh_atomic_val_t bt_mesh_atomic_get(const bt_mesh_atomic_t *target);
 #endif
 
 /**
@@ -158,7 +93,7 @@ extern atomic_val_t atomic_get(const atomic_t *target);
  * @return Previous value of @a target.
  */
 #ifdef CONFIG_ATOMIC_OPERATIONS_BUILTIN
-static inline atomic_val_t atomic_set(atomic_t *target, atomic_val_t value)
+static inline bt_mesh_atomic_val_t bt_mesh_atomic_set(bt_mesh_atomic_t *target, bt_mesh_atomic_val_t value)
 {
     /* This builtin, as described by Intel, is not a traditional
      * test-and-set operation, but rather an atomic exchange operation. It
@@ -167,27 +102,7 @@ static inline atomic_val_t atomic_set(atomic_t *target, atomic_val_t value)
     return __atomic_exchange_n(target, value, __ATOMIC_SEQ_CST);
 }
 #else
-extern atomic_val_t atomic_set(atomic_t *target, atomic_val_t value);
-#endif
-
-/**
- *
- * @brief Atomic clear.
- *
- * This routine atomically sets @a target to zero and returns its previous
- * value. (Hence, it is equivalent to atomic_set(target, 0).)
- *
- * @param target Address of atomic variable.
- *
- * @return Previous value of @a target.
- */
-#ifdef CONFIG_ATOMIC_OPERATIONS_BUILTIN
-static inline atomic_val_t atomic_clear(atomic_t *target)
-{
-    return atomic_set(target, 0);
-}
-#else
-extern atomic_val_t atomic_clear(atomic_t *target);
+extern bt_mesh_atomic_val_t bt_mesh_atomic_set(bt_mesh_atomic_t *target, bt_mesh_atomic_val_t value);
 #endif
 
 /**
@@ -203,33 +118,12 @@ extern atomic_val_t atomic_clear(atomic_t *target);
  * @return Previous value of @a target.
  */
 #ifdef CONFIG_ATOMIC_OPERATIONS_BUILTIN
-static inline atomic_val_t atomic_or(atomic_t *target, atomic_val_t value)
+static inline bt_mesh_atomic_val_t bt_mesh_atomic_or(bt_mesh_atomic_t *target, bt_mesh_atomic_val_t value)
 {
     return __atomic_fetch_or(target, value, __ATOMIC_SEQ_CST);
 }
 #else
-extern atomic_val_t atomic_or(atomic_t *target, atomic_val_t value);
-#endif
-
-/**
- *
- * @brief Atomic bitwise exclusive OR (XOR).
- *
- * This routine atomically sets @a target to the bitwise exclusive OR (XOR) of
- * @a target and @a value.
- *
- * @param target Address of atomic variable.
- * @param value Value to XOR
- *
- * @return Previous value of @a target.
- */
-#ifdef CONFIG_ATOMIC_OPERATIONS_BUILTIN
-static inline atomic_val_t atomic_xor(atomic_t *target, atomic_val_t value)
-{
-    return __atomic_fetch_xor(target, value, __ATOMIC_SEQ_CST);
-}
-#else
-extern atomic_val_t atomic_xor(atomic_t *target, atomic_val_t value);
+extern bt_mesh_atomic_val_t bt_mesh_atomic_or(bt_mesh_atomic_t *target, bt_mesh_atomic_val_t value);
 #endif
 
 /**
@@ -245,53 +139,21 @@ extern atomic_val_t atomic_xor(atomic_t *target, atomic_val_t value);
  * @return Previous value of @a target.
  */
 #ifdef CONFIG_ATOMIC_OPERATIONS_BUILTIN
-static inline atomic_val_t atomic_and(atomic_t *target, atomic_val_t value)
+static inline bt_mesh_atomic_val_t bt_mesh_atomic_and(bt_mesh_atomic_t *target, bt_mesh_atomic_val_t value)
 {
     return __atomic_fetch_and(target, value, __ATOMIC_SEQ_CST);
 }
 #else
-extern atomic_val_t atomic_and(atomic_t *target, atomic_val_t value);
+extern bt_mesh_atomic_val_t bt_mesh_atomic_and(bt_mesh_atomic_t *target, bt_mesh_atomic_val_t value);
 #endif
-
-/**
- *
- * @brief Atomic bitwise NAND.
- *
- * This routine atomically sets @a target to the bitwise NAND of @a target
- * and @a value. (This operation is equivalent to target = ~(target & value).)
- *
- * @param target Address of atomic variable.
- * @param value Value to NAND.
- *
- * @return Previous value of @a target.
- */
-#ifdef CONFIG_ATOMIC_OPERATIONS_BUILTIN
-static inline atomic_val_t atomic_nand(atomic_t *target, atomic_val_t value)
-{
-    return __atomic_fetch_nand(target, value, __ATOMIC_SEQ_CST);
-}
-#else
-extern atomic_val_t atomic_nand(atomic_t *target, atomic_val_t value);
-#endif
-
-
-/**
- * @brief Initialize an atomic variable.
- *
- * This macro can be used to initialize an atomic variable. For example,
- * @code atomic_t my_var = ATOMIC_INIT(75); @endcode
- *
- * @param i Value to assign to atomic variable.
- */
-#define ATOMIC_INIT(i) (i)
 
 /**
  * @cond INTERNAL_HIDDEN
  */
 
-#define ATOMIC_BITS (sizeof(atomic_val_t) * 8)
-#define ATOMIC_MASK(bit) (1 << ((bit) & (ATOMIC_BITS - 1)))
-#define ATOMIC_ELEM(addr, bit) ((addr) + ((bit) / ATOMIC_BITS))
+#define BLE_MESH_ATOMIC_BITS            (sizeof(bt_mesh_atomic_val_t) * 8)
+#define BLE_MESH_ATOMIC_MASK(bit)       (1 << ((bit) & (BLE_MESH_ATOMIC_BITS - 1)))
+#define BLE_MESH_ATOMIC_ELEM(addr, bit) ((addr) + ((bit) / BLE_MESH_ATOMIC_BITS))
 
 /**
  * INTERNAL_HIDDEN @endcond
@@ -310,8 +172,8 @@ extern atomic_val_t atomic_nand(atomic_t *target, atomic_val_t value);
  * @param name Name of array of atomic variables.
  * @param num_bits Number of bits needed.
  */
-#define ATOMIC_DEFINE(name, num_bits) \
-    atomic_t name[1 + ((num_bits) - 1) / ATOMIC_BITS]
+#define BLE_MESH_ATOMIC_DEFINE(name, num_bits) \
+        bt_mesh_atomic_t name[1 + ((num_bits) - 1) / BLE_MESH_ATOMIC_BITS]
 
 /**
  * @brief Atomically test a bit.
@@ -324,11 +186,11 @@ extern atomic_val_t atomic_nand(atomic_t *target, atomic_val_t value);
  *
  * @return 1 if the bit was set, 0 if it wasn't.
  */
-static inline int atomic_test_bit(const atomic_t *target, int bit)
+static inline int bt_mesh_atomic_test_bit(const bt_mesh_atomic_t *target, int bit)
 {
-    atomic_val_t val = atomic_get(ATOMIC_ELEM(target, bit));
+    bt_mesh_atomic_val_t val = bt_mesh_atomic_get(BLE_MESH_ATOMIC_ELEM(target, bit));
 
-    return (1 & (val >> (bit & (ATOMIC_BITS - 1))));
+    return (1 & (val >> (bit & (BLE_MESH_ATOMIC_BITS - 1))));
 }
 
 /**
@@ -342,12 +204,12 @@ static inline int atomic_test_bit(const atomic_t *target, int bit)
  *
  * @return 1 if the bit was set, 0 if it wasn't.
  */
-static inline int atomic_test_and_clear_bit(atomic_t *target, int bit)
+static inline int bt_mesh_atomic_test_and_clear_bit(bt_mesh_atomic_t *target, int bit)
 {
-    atomic_val_t mask = ATOMIC_MASK(bit);
-    atomic_val_t old;
+    bt_mesh_atomic_val_t mask = BLE_MESH_ATOMIC_MASK(bit);
+    bt_mesh_atomic_val_t old;
 
-    old = atomic_and(ATOMIC_ELEM(target, bit), ~mask);
+    old = bt_mesh_atomic_and(BLE_MESH_ATOMIC_ELEM(target, bit), ~mask);
 
     return (old & mask) != 0;
 }
@@ -363,12 +225,12 @@ static inline int atomic_test_and_clear_bit(atomic_t *target, int bit)
  *
  * @return 1 if the bit was set, 0 if it wasn't.
  */
-static inline int atomic_test_and_set_bit(atomic_t *target, int bit)
+static inline int bt_mesh_atomic_test_and_set_bit(bt_mesh_atomic_t *target, int bit)
 {
-    atomic_val_t mask = ATOMIC_MASK(bit);
-    atomic_val_t old;
+    bt_mesh_atomic_val_t mask = BLE_MESH_ATOMIC_MASK(bit);
+    bt_mesh_atomic_val_t old;
 
-    old = atomic_or(ATOMIC_ELEM(target, bit), mask);
+    old = bt_mesh_atomic_or(BLE_MESH_ATOMIC_ELEM(target, bit), mask);
 
     return (old & mask) != 0;
 }
@@ -384,11 +246,11 @@ static inline int atomic_test_and_set_bit(atomic_t *target, int bit)
  *
  * @return N/A
  */
-static inline void atomic_clear_bit(atomic_t *target, int bit)
+static inline void bt_mesh_atomic_clear_bit(bt_mesh_atomic_t *target, int bit)
 {
-    atomic_val_t mask = ATOMIC_MASK(bit);
+    bt_mesh_atomic_val_t mask = BLE_MESH_ATOMIC_MASK(bit);
 
-    atomic_and(ATOMIC_ELEM(target, bit), ~mask);
+    bt_mesh_atomic_and(BLE_MESH_ATOMIC_ELEM(target, bit), ~mask);
 }
 
 /**
@@ -402,11 +264,11 @@ static inline void atomic_clear_bit(atomic_t *target, int bit)
  *
  * @return N/A
  */
-static inline void atomic_set_bit(atomic_t *target, int bit)
+static inline void bt_mesh_atomic_set_bit(bt_mesh_atomic_t *target, int bit)
 {
-    atomic_val_t mask = ATOMIC_MASK(bit);
+    bt_mesh_atomic_val_t mask = BLE_MESH_ATOMIC_MASK(bit);
 
-    atomic_or(ATOMIC_ELEM(target, bit), mask);
+    bt_mesh_atomic_or(BLE_MESH_ATOMIC_ELEM(target, bit), mask);
 }
 
 /**
@@ -417,4 +279,4 @@ static inline void atomic_set_bit(atomic_t *target, int bit)
 }
 #endif
 
-#endif /* __ATOMIC_H__ */
+#endif /* _BLE_MESH_ATOMIC_H_ */

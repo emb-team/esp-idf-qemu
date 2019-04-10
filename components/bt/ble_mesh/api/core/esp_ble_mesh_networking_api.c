@@ -12,28 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <string.h>
+#include <stdint.h>
 #include <errno.h>
 
 #include "btc/btc_task.h"
 #include "btc/btc_manage.h"
-#include "osi/allocator.h"
 
-#include "esp_bt_defs.h"
 #include "esp_err.h"
+#include "esp_bt_defs.h"
 #include "esp_bt_main.h"
-#include "sdkconfig.h"
 
 #include "btc_ble_mesh_prov.h"
-
-#include "mesh.h"
-#include "mesh_buf.h"
-#include "transport.h"
-#include "provisioner_main.h"
-#include "esp_ble_mesh_defs.h"
 #include "esp_ble_mesh_networking_api.h"
 
-#if CONFIG_BT_MESH
+#define ESP_BLE_MESH_TX_SDU_MAX ((CONFIG_BLE_MESH_ADV_BUF_COUNT - 3) * 12)
 
 static esp_err_t ble_mesh_send_msg(esp_ble_mesh_model_t *model,
                                    esp_ble_mesh_msg_ctx_t *ctx,
@@ -43,11 +35,11 @@ static esp_err_t ble_mesh_send_msg(esp_ble_mesh_model_t *model,
                                    int32_t msg_timeout, bool need_rsp,
                                    esp_ble_mesh_dev_role_t device_role)
 {
-    btc_msg_t msg;
-    btc_ble_mesh_model_args_t arg;
-    esp_err_t status;
+    btc_ble_mesh_model_args_t arg = {0};
     uint8_t op_len = 0, mic_len = 0;
     uint8_t *msg_data = NULL;
+    btc_msg_t msg = {0};
+    esp_err_t status;
 
     ESP_BLUEDROID_STATUS_CHECK(ESP_BLUEDROID_STATUS_ENABLED);
 
@@ -70,7 +62,7 @@ static esp_err_t ble_mesh_send_msg(esp_ble_mesh_model_t *model,
 
     if (act == BTC_BLE_MESH_ACT_MODEL_PUBLISH) {
         if (op_len + length > model->pub->msg->size) {
-            LOG_ERROR("%s: model->pub->msg->size %d is too small", __func__, model->pub->msg->size);
+            LOG_ERROR("%s, Model publication msg size %d is too small", __func__, model->pub->msg->size);
             return ESP_ERR_INVALID_ARG;
         }
     }
@@ -81,8 +73,8 @@ static esp_err_t ble_mesh_send_msg(esp_ble_mesh_model_t *model,
         mic_len = ctx->send_rel ? 8 : 4;
     }
 
-    if (op_len + length + mic_len > MIN(ESP_BLE_MESH_SDU_MAX_LEN, BT_MESH_TX_SDU_MAX)) {
-        LOG_ERROR("%s: The data length %d is too large", __func__, length);
+    if (op_len + length + mic_len > MIN(ESP_BLE_MESH_SDU_MAX_LEN, ESP_BLE_MESH_TX_SDU_MAX)) {
+        LOG_ERROR("%s, Data length %d is too large", __func__, length);
         return ESP_ERR_INVALID_ARG;
     }
 
@@ -148,19 +140,23 @@ esp_err_t esp_ble_mesh_model_msg_opcode_init(uint8_t *data, uint32_t opcode)
     if (opcode < 0x10000) {
         /* 2-byte OpCode, big endian */
         val = sys_cpu_to_be16 (opcode);
-        memcpy (data, &val, 2);
+        memcpy(data, &val, 2);
         return ESP_OK;
     }
 
     /* 3-byte OpCode, note that little endian for the least 2 bytes(Company ID) of opcode */
     data[0] = (opcode >> 16) & 0xff;
     val = sys_cpu_to_le16(opcode & 0xffff);
-    memcpy (&data[1], &val, 2);
+    memcpy(&data[1], &val, 2);
+
     return ESP_OK;
 }
 
-int esp_ble_mesh_client_model_init(esp_ble_mesh_model_t *model)
+esp_err_t esp_ble_mesh_client_model_init(esp_ble_mesh_model_t *model)
 {
+    if (model == NULL) {
+        return ESP_ERR_INVALID_ARG;
+    }
     return btc_ble_mesh_client_init(model);
 }
 
@@ -200,7 +196,7 @@ esp_err_t esp_ble_mesh_model_publish(esp_ble_mesh_model_t *model, uint32_t opcod
 
 esp_err_t esp_ble_mesh_node_local_reset(void)
 {
-    btc_msg_t msg;
+    btc_msg_t msg = {0};
 
     ESP_BLUEDROID_STATUS_CHECK(ESP_BLUEDROID_STATUS_ENABLED);
 
@@ -211,16 +207,16 @@ esp_err_t esp_ble_mesh_node_local_reset(void)
     return (btc_transfer_context(&msg, NULL, 0, NULL) == BT_STATUS_SUCCESS ? ESP_OK : ESP_FAIL);
 }
 
-#if (CONFIG_BT_MESH_PROVISIONER)
+#if (CONFIG_BLE_MESH_PROVISIONER)
 
 esp_err_t esp_ble_mesh_provisioner_set_node_name(int index, const char *name)
 {
+    btc_ble_mesh_prov_args_t arg = {0};
+    btc_msg_t msg = {0};
+
     if (!name || (strlen(name) > ESP_BLE_MESH_NODE_NAME_MAX_LEN)) {
         return ESP_ERR_INVALID_ARG;
     }
-
-    btc_msg_t msg;
-    btc_ble_mesh_prov_args_t arg;
 
     ESP_BLUEDROID_STATUS_CHECK(ESP_BLUEDROID_STATUS_ENABLED);
 
@@ -252,8 +248,8 @@ int esp_ble_mesh_provisioner_get_node_index(const char *name)
 esp_err_t esp_ble_mesh_provisioner_add_local_app_key(const uint8_t app_key[16],
         uint16_t net_idx, uint16_t app_idx)
 {
-    btc_msg_t msg;
-    btc_ble_mesh_prov_args_t arg;
+    btc_ble_mesh_prov_args_t arg = {0};
+    btc_msg_t msg = {0};
 
     ESP_BLUEDROID_STATUS_CHECK(ESP_BLUEDROID_STATUS_ENABLED);
 
@@ -280,12 +276,12 @@ const uint8_t *esp_ble_mesh_provisioner_get_local_app_key(uint16_t net_idx, uint
 esp_err_t esp_ble_mesh_provisioner_bind_app_key_to_local_model(uint16_t element_addr, uint16_t app_idx,
         uint16_t model_id, uint16_t company_id)
 {
+    btc_ble_mesh_prov_args_t arg = {0};
+    btc_msg_t msg = {0};
+
     if (!ESP_BLE_MESH_ADDR_IS_UNICAST(element_addr)) {
         return ESP_ERR_INVALID_ARG;
     }
-
-    btc_msg_t msg;
-    btc_ble_mesh_prov_args_t arg;
 
     ESP_BLUEDROID_STATUS_CHECK(ESP_BLUEDROID_STATUS_ENABLED);
 
@@ -303,12 +299,12 @@ esp_err_t esp_ble_mesh_provisioner_bind_app_key_to_local_model(uint16_t element_
 
 esp_err_t esp_ble_mesh_provisioner_add_local_net_key(const uint8_t net_key[16], uint16_t net_idx)
 {
+    btc_ble_mesh_prov_args_t arg = {0};
+    btc_msg_t msg = {0};
+
     if (net_idx == ESP_BLE_MESH_KEY_PRIMARY) {
         return ESP_ERR_INVALID_ARG;
     }
-
-    btc_msg_t msg;
-    btc_ble_mesh_prov_args_t arg;
 
     ESP_BLUEDROID_STATUS_CHECK(ESP_BLUEDROID_STATUS_ENABLED);
 
@@ -331,14 +327,12 @@ const uint8_t *esp_ble_mesh_provisioner_get_local_net_key(uint16_t net_idx)
     return bt_mesh_provisioner_local_net_key_get(net_idx);
 }
 
-#endif /* CONFIG_BT_MESH_PROVISIONER */
+#endif /* CONFIG_BLE_MESH_PROVISIONER */
 
-#if (CONFIG_BT_MESH_FAST_PROV)
+#if (CONFIG_BLE_MESH_FAST_PROV)
 const uint8_t *esp_ble_mesh_get_fast_prov_app_key(uint16_t net_idx, uint16_t app_idx)
 {
     return bt_mesh_get_fast_prov_app_key(net_idx, app_idx);
 }
-#endif  /* CONFIG_BT_MESH_FAST_PROV */
-
-#endif /* #if CONFIG_BT_MESH */
+#endif  /* CONFIG_BLE_MESH_FAST_PROV */
 

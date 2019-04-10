@@ -7,46 +7,35 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include "freertos/xtensa_api.h"
-#include "freertos/FreeRTOSConfig.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 #include "freertos/task.h"
-#include "sdkconfig.h"
-
-#if CONFIG_BT_MESH
 
 #include "osi/thread.h"
+#include "sdkconfig.h"
+#define BT_DBG_ENABLED IS_ENABLED(CONFIG_BLE_MESH_DEBUG_ADV)
 
 #include "mesh_util.h"
-
 #include "mesh_buf.h"
-#include "mesh.h"
 #include "mesh_bearer_adapt.h"
-#define BT_DBG_ENABLED IS_ENABLED(CONFIG_BT_MESH_DEBUG_ADV)
 #include "mesh_trace.h"
+#include "mesh_hci.h"
 
+#include "mesh.h"
 #include "adv.h"
 #include "foundation.h"
 #include "net.h"
 #include "beacon.h"
 #include "prov.h"
 #include "proxy.h"
-#include "mesh_hci.h"
 
-#include "sdkconfig.h"
 #include "provisioner_prov.h"
 #include "provisioner_proxy.h"
 #include "provisioner_beacon.h"
 
-#define BT_DATA_MESH_PROV               0x29 /* Mesh Provisioning PDU */
-#define BT_DATA_MESH_MESSAGE            0x2a /* Mesh Networking PDU */
-#define BT_DATA_MESH_BEACON             0x2b /* Mesh Beacon */
-
-
 /* Window and Interval are equal for continuous scanning */
-#define MESH_SCAN_INTERVAL 0x20//0x10 /*Change the scan interval to 20ms here just to reduce the packet loss rate */
-#define MESH_SCAN_WINDOW   0x20//0x10 /*Change the scan window to 20ms here just to reduce the packet loss rate */
+#define BLE_MESH_SCAN_INTERVAL  0x20 /*Change the scan interval to 20ms here just to reduce the packet loss rate */
+#define BLE_MESH_SCAN_WINDOW    0x20 /*Change the scan window to 20ms here just to reduce the packet loss rate */
 
 /* Convert from ms to 0.625ms units */
 #define ADV_INT(_ms) ((_ms) * 8 / 5)
@@ -67,18 +56,18 @@
 #endif
 
 static xQueueHandle xBleMeshQueue = 0;
-static const bt_addr_le_t *dev_addr;
+static const bt_mesh_addr_t *dev_addr;
 
 static const u8_t adv_type[] = {
-    [BT_MESH_ADV_PROV]   = BT_DATA_MESH_PROV,
-    [BT_MESH_ADV_DATA]   = BT_DATA_MESH_MESSAGE,
-    [BT_MESH_ADV_BEACON] = BT_DATA_MESH_BEACON,
+    [BLE_MESH_ADV_PROV]   = BLE_MESH_DATA_MESH_PROV,
+    [BLE_MESH_ADV_DATA]   = BLE_MESH_DATA_MESH_MESSAGE,
+    [BLE_MESH_ADV_BEACON] = BLE_MESH_DATA_MESH_BEACON,
 };
 
-NET_BUF_POOL_DEFINE(adv_buf_pool, CONFIG_BT_MESH_ADV_BUF_COUNT + 3 * CONFIG_BT_MESH_PBA_SAME_TIME,
-                    BT_MESH_ADV_DATA_SIZE, BT_MESH_ADV_USER_DATA_SIZE, NULL);
+NET_BUF_POOL_DEFINE(adv_buf_pool, CONFIG_BLE_MESH_ADV_BUF_COUNT + 3 * CONFIG_BLE_MESH_PBA_SAME_TIME,
+                    BLE_MESH_ADV_DATA_SIZE, BLE_MESH_ADV_USER_DATA_SIZE, NULL);
 
-static struct bt_mesh_adv adv_pool[CONFIG_BT_MESH_ADV_BUF_COUNT + 3 * CONFIG_BT_MESH_PBA_SAME_TIME];
+static struct bt_mesh_adv adv_pool[CONFIG_BLE_MESH_ADV_BUF_COUNT + 3 * CONFIG_BLE_MESH_PBA_SAME_TIME];
 
 static struct bt_mesh_adv *adv_alloc(int id)
 {
@@ -104,37 +93,36 @@ static inline void adv_send_end(int err, const struct bt_mesh_send_cb *cb,
 
 static inline int adv_send(struct net_buf *buf)
 {
-    const s32_t adv_int_min = ((bt_dev.hci_version >= BT_HCI_VERSION_5_0) ?
+    const s32_t adv_int_min = ((bt_mesh_dev.hci_version >= BLE_MESH_HCI_VERSION_5_0) ?
                                ADV_INT_FAST : ADV_INT_DEFAULT);
-    const struct bt_mesh_send_cb *cb = BT_MESH_ADV(buf)->cb;
-    void *cb_data = BT_MESH_ADV(buf)->cb_data;
-    struct bt_le_adv_param param;
+    const struct bt_mesh_send_cb *cb = BLE_MESH_ADV(buf)->cb;
+    void *cb_data = BLE_MESH_ADV(buf)->cb_data;
+    struct bt_mesh_adv_param param = {0};
+    struct bt_mesh_adv_data ad = {0};
     u16_t duration, adv_int;
-    struct bt_data ad;
     int err;
 
-    adv_int = max(adv_int_min, BT_MESH_ADV(buf)->adv_int);
-    duration = (BT_MESH_ADV(buf)->count + 1) * (adv_int + 10);
+    adv_int = MAX(adv_int_min, BLE_MESH_ADV(buf)->adv_int);
+    duration = (BLE_MESH_ADV(buf)->count + 1) * (adv_int + 10);
 
-    BT_DBG("type %u len %u: %s", BT_MESH_ADV(buf)->type,
+    BT_DBG("type %u len %u: %s", BLE_MESH_ADV(buf)->type,
            buf->len, bt_hex(buf->data, buf->len));
     BT_DBG("count %u interval %ums duration %ums",
-           BT_MESH_ADV(buf)->count + 1, adv_int, duration);
+           BLE_MESH_ADV(buf)->count + 1, adv_int, duration);
 
-    ad.type = adv_type[BT_MESH_ADV(buf)->type];
+    ad.type = adv_type[BLE_MESH_ADV(buf)->type];
     ad.data_len = buf->len;
     ad.data = buf->data;
 
     param.options = 0;
     param.interval_min = ADV_INT(adv_int);
     param.interval_max = param.interval_min;
-    param.own_addr = NULL;
 
     err = bt_le_adv_start(&param, &ad, 1, NULL, 0);
     net_buf_unref(buf);
     adv_send_start(duration, err, cb, cb_data);
     if (err) {
-        BT_ERR("Advertising failed: err %d", err);
+        BT_ERR("%s, Failed to start advertising, err %d", __func__, err);
         return err;
     }
 
@@ -145,7 +133,7 @@ static inline int adv_send(struct net_buf *buf)
     err = bt_le_adv_stop();
     adv_send_end(err, cb, cb_data);
     if (err) {
-        BT_ERR("Stopping advertising failed: err %d", err);
+        BT_ERR("%s, Faile to stop advertising, err %d", __func__, err);
         /* If start adv successfully but stop failed, we think the data has been sent successfully */
         return 0;
     }
@@ -158,23 +146,26 @@ static inline int adv_send(struct net_buf *buf)
  * FreeRTOS task implementation to use on ESP-IDF */
 static void adv_thread(void *p)
 {
-    BT_DBG("started");
+    struct net_buf **buf = NULL;
+    bt_mesh_msg_t msg = {0};
     int status;
-    struct net_buf **buf;
-    ble_mesh_msg_t msg = {0};
+
+    BT_DBG("ADV thread starts");
+
     buf = (struct net_buf **)(&msg.arg);
 
     while (1) {
         *buf = NULL;
-#if CONFIG_BT_MESH_NODE
-        if (IS_ENABLED(CONFIG_BT_MESH_PROXY)) {
+#if CONFIG_BLE_MESH_NODE
+        if (IS_ENABLED(CONFIG_BLE_MESH_PROXY)) {
             xQueueReceive(xBleMeshQueue, &msg, K_NO_WAIT);
             while (!(*buf)) {
                 s32_t timeout;
-                BT_DBG("========");
+                BT_DBG("Proxy advertising start");
                 timeout = bt_mesh_proxy_adv_start();
-                BT_DBG("=========Proxy Advertising up to %d ms", timeout);
+                BT_DBG("Proxy Advertising up to %d ms", timeout);
                 xQueueReceive(xBleMeshQueue, &msg, timeout);
+                BT_DBG("Proxy advertising stop");
                 bt_mesh_proxy_adv_stop();
             }
         } else {
@@ -189,16 +180,15 @@ static void adv_thread(void *p)
         }
 
         /* busy == 0 means this was canceled */
-        if (BT_MESH_ADV(*buf)->busy) {
-            BT_MESH_ADV(*buf)->busy = 0;
+        if (BLE_MESH_ADV(*buf)->busy) {
+            BLE_MESH_ADV(*buf)->busy = 0;
             /*TODO: Currently we check status of adv_send, which has changed the original
              * code of Zephyr, we need to find a better way in the future
              * */
             status = adv_send(*buf);
             if (status) {
-                status = xQueueSendToFront(xBleMeshQueue, &msg, K_NO_WAIT);
-                if (status) {
-                    BT_ERR("adv_send, xQueueSendToFront failed, status=0x%x", status);
+                if (xQueueSendToFront(xBleMeshQueue, &msg, K_NO_WAIT) != pdTRUE) {
+                    BT_ERR("%s, xQueueSendToFront failed", __func__);
                 }
             }
         }
@@ -210,11 +200,10 @@ static void adv_thread(void *p)
 
 void bt_mesh_adv_update(void)
 {
+    bt_mesh_msg_t msg = {0};
     BT_DBG("%s", __func__);
-    ble_mesh_msg_t msg = {0};
     msg.arg = NULL;
-    // Change by Espressif, should used the QueueSend in the ESP-IDF architecture.
-    ble_mesh_task_post(&msg, 0);
+    bt_mesh_task_post(&msg, 0);
 }
 
 struct net_buf *bt_mesh_adv_create_from_pool(struct net_buf_pool *pool,
@@ -233,16 +222,17 @@ struct net_buf *bt_mesh_adv_create_from_pool(struct net_buf_pool *pool,
 
     BT_DBG("%s, pool_id = %p, buf_count = %d, uinit_count = %d", __func__,
            buf->pool_id, pool->buf_count, pool->uninit_count);
+
     // adv = get_id(pool->buf_count - pool->uninit_count);
     /* Change by Espressif. Use buf->index to get corresponding adv_pool */
     adv = get_id(buf->index);
-    BT_MESH_ADV(buf) = adv;
+    BLE_MESH_ADV(buf) = adv;
 
     memset(adv, 0, sizeof(*adv));
 
-    adv->type         = type;
-    adv->count        = xmit_count;
-    adv->adv_int      = xmit_int;
+    adv->type = type;
+    adv->count = xmit_count;
+    adv->adv_int = xmit_int;
 
     return buf;
 }
@@ -254,48 +244,44 @@ struct net_buf *bt_mesh_adv_create(enum bt_mesh_adv_type type, u8_t xmit_count,
                                         xmit_count, xmit_int, timeout);
 }
 
-void ble_mesh_task_post(ble_mesh_msg_t *msg, uint32_t timeout)
+void bt_mesh_task_post(bt_mesh_msg_t *msg, uint32_t timeout)
 {
     BT_DBG("%s", __func__);
     if (xQueueSend(xBleMeshQueue, msg, timeout) != pdTRUE) {
-        BT_ERR("Ble Mesh Post failed\n");
-        return;
+        BT_ERR("%s, Failed to post msg to queue", __func__);
     }
 }
 
 void bt_mesh_adv_send(struct net_buf *buf, const struct bt_mesh_send_cb *cb,
                       void *cb_data)
 {
-    ble_mesh_msg_t msg = {0};
-    struct net_buf *send_buf = NULL;
-    BT_DBG("type 0x%02x len %u: %s", BT_MESH_ADV(buf)->type, buf->len,
-           bt_hex(buf->data, buf->len));
+    bt_mesh_msg_t msg = {0};
 
-    BT_MESH_ADV(buf)->cb = cb;
-    BT_MESH_ADV(buf)->cb_data = cb_data;
-    BT_MESH_ADV(buf)->busy = 1;
-    send_buf = net_buf_ref(buf);
-    msg.arg = (void *)send_buf;
-    //net_buf_put(NULL, net_buf_ref(buf));
+    BT_DBG("type 0x%02x len %u: %s", BLE_MESH_ADV(buf)->type, buf->len,
+            bt_hex(buf->data, buf->len));
+
+    BLE_MESH_ADV(buf)->cb = cb;
+    BLE_MESH_ADV(buf)->cb_data = cb_data;
+    BLE_MESH_ADV(buf)->busy = 1;
+
+    msg.arg = (void *)net_buf_ref(buf);
     /* Change by Espressif. The ESP-IDF should used the QueueSend to sent the msg. */
-    ble_mesh_task_post(&msg, portMAX_DELAY);
-    /* Deleted the net_buf_put function, we don't used it in the ESP-IDF architecture */
-    //net_buf_put(NULL, net_buf_ref(buf));
+    bt_mesh_task_post(&msg, portMAX_DELAY);
 }
 
-const bt_addr_le_t *bt_mesh_pba_get_addr(void)
+const bt_mesh_addr_t *bt_mesh_pba_get_addr(void)
 {
     return dev_addr;
 }
 
-static void bt_mesh_scan_cb(const bt_addr_le_t *addr, s8_t rssi,
+static void bt_mesh_scan_cb(const bt_mesh_addr_t *addr, s8_t rssi,
                             u8_t adv_type, struct net_buf_simple *buf)
 {
-#if CONFIG_BT_MESH_PROVISIONER && CONFIG_BT_MESH_PB_GATT
+#if CONFIG_BLE_MESH_PROVISIONER && CONFIG_BLE_MESH_PB_GATT
     u16_t uuid = 0;
 #endif
 
-    if (adv_type != BT_LE_ADV_NONCONN_IND && adv_type != BT_LE_ADV_IND) {
+    if (adv_type != BLE_MESH_ADV_NONCONN_IND && adv_type != BLE_MESH_ADV_IND) {
         return;
     }
 
@@ -326,8 +312,8 @@ static void bt_mesh_scan_cb(const bt_addr_le_t *addr, s8_t rssi,
 
 #if 0
         /* TODO: Check with BLE Mesh BQB test cases */
-        if ((type == BT_DATA_MESH_PROV || type == BT_DATA_MESH_MESSAGE ||
-            type == BT_DATA_MESH_BEACON) && (adv_type != BT_LE_ADV_NONCONN_IND)) {
+        if ((type == BLE_MESH_DATA_MESH_PROV || type == BLE_MESH_DATA_MESH_MESSAGE ||
+            type == BLE_MESH_DATA_MESH_BEACON) && (adv_type != BLE_MESH_ADV_NONCONN_IND)) {
             BT_DBG("%s, ignore BLE Mesh packet (type 0x%02x) with adv_type 0x%02x",
                     __func__, type, adv_type);
             return;
@@ -335,37 +321,37 @@ static void bt_mesh_scan_cb(const bt_addr_le_t *addr, s8_t rssi,
 #endif
 
         switch (type) {
-        case BT_DATA_MESH_MESSAGE:
-            bt_mesh_net_recv(buf, rssi, BT_MESH_NET_IF_ADV);
+        case BLE_MESH_DATA_MESH_MESSAGE:
+            bt_mesh_net_recv(buf, rssi, BLE_MESH_NET_IF_ADV);
             break;
-#if CONFIG_BT_MESH_PB_ADV
-        case BT_DATA_MESH_PROV:
-#if CONFIG_BT_MESH_NODE
+#if CONFIG_BLE_MESH_PB_ADV
+        case BLE_MESH_DATA_MESH_PROV:
+#if CONFIG_BLE_MESH_NODE
             if (!bt_mesh_is_provisioner_en()) {
                 bt_mesh_pb_adv_recv(buf);
             }
 #endif
-#if CONFIG_BT_MESH_PROVISIONER
+#if CONFIG_BLE_MESH_PROVISIONER
             if (bt_mesh_is_provisioner_en()) {
                 provisioner_pb_adv_recv(buf);
             }
 #endif
             break;
-#endif /* CONFIG_BT_MESH_PB_ADV */
-        case BT_DATA_MESH_BEACON:
-#if CONFIG_BT_MESH_NODE
+#endif /* CONFIG_BLE_MESH_PB_ADV */
+        case BLE_MESH_DATA_MESH_BEACON:
+#if CONFIG_BLE_MESH_NODE
             if (!bt_mesh_is_provisioner_en()) {
                 bt_mesh_beacon_recv(buf);
             }
 #endif
-#if CONFIG_BT_MESH_PROVISIONER
+#if CONFIG_BLE_MESH_PROVISIONER
             if (bt_mesh_is_provisioner_en()) {
                 provisioner_beacon_recv(buf);
             }
 #endif
             break;
-#if CONFIG_BT_MESH_PROVISIONER && CONFIG_BT_MESH_PB_GATT
-        case BT_DATA_FLAGS:
+#if CONFIG_BLE_MESH_PROVISIONER && CONFIG_BLE_MESH_PB_GATT
+        case BLE_MESH_DATA_FLAGS:
             if (bt_mesh_is_provisioner_en()) {
                 if (!provisioner_flags_match(buf)) {
                     BT_DBG("Flags mismatch, ignore this adv pkt");
@@ -373,7 +359,7 @@ static void bt_mesh_scan_cb(const bt_addr_le_t *addr, s8_t rssi,
                 }
             }
             break;
-        case BT_DATA_SERVICE_UUID:
+        case BLE_MESH_DATA_UUID16_ALL:
             if (bt_mesh_is_provisioner_en()) {
                 uuid = provisioner_srv_uuid_recv(buf);
                 if (!uuid) {
@@ -382,12 +368,12 @@ static void bt_mesh_scan_cb(const bt_addr_le_t *addr, s8_t rssi,
                 }
             }
             break;
-        case BT_DATA_SERVICE_DATA:
+        case BLE_MESH_DATA_SVC_DATA16:
             if (bt_mesh_is_provisioner_en()) {
                 provisioner_srv_data_recv(buf, addr, uuid);
             }
             break;
-#endif /* CONFIG_BT_MESH_PROVISIONER && CONFIG_BT_MESH_PB_GATT */
+#endif /* CONFIG_BLE_MESH_PROVISIONER && CONFIG_BLE_MESH_PB_GATT */
         default:
             break;
         }
@@ -402,18 +388,18 @@ static void bt_mesh_scan_cb(const bt_addr_le_t *addr, s8_t rssi,
 void bt_mesh_adv_init(void)
 {
     /* Change by Espressif, we should used the FreeRTOS create task method to use task */
-    xBleMeshQueue = xQueueCreate(150, sizeof(ble_mesh_msg_t));
-    xTaskCreatePinnedToCore(adv_thread, "BLE_Mesh_Adv_task", 2048, NULL,
+    xBleMeshQueue = xQueueCreate(150, sizeof(bt_mesh_msg_t));
+    xTaskCreatePinnedToCore(adv_thread, "BLE_Mesh_ADV_Task", 3072, NULL,
                             configMAX_PRIORITIES - 7, NULL, TASK_PINNED_TO_CORE);
 }
 
 int bt_mesh_scan_enable(void)
 {
-    struct bt_le_scan_param scan_param = {
-        .type       = BT_HCI_LE_SCAN_PASSIVE,
-        .filter_dup = BT_HCI_LE_SCAN_FILTER_DUP_DISABLE,
-        .interval   = MESH_SCAN_INTERVAL,
-        .window     = MESH_SCAN_WINDOW
+    struct bt_mesh_scan_param scan_param = {
+        .type       = BLE_MESH_SCAN_PASSIVE,
+        .filter_dup = BLE_MESH_SCAN_FILTER_DUP_DISABLE,
+        .interval   = BLE_MESH_SCAN_INTERVAL,
+        .window     = BLE_MESH_SCAN_WINDOW
     };
 
     BT_DBG("%s", __func__);
@@ -421,14 +407,14 @@ int bt_mesh_scan_enable(void)
     return bt_le_scan_start(&scan_param, bt_mesh_scan_cb);
 }
 
-#if defined(CONFIG_BT_MESH_USE_DUPLICATE_SCAN)
+#if defined(CONFIG_BLE_MESH_USE_DUPLICATE_SCAN)
 int bt_mesh_duplicate_scan_enable(void)
 {
-    struct bt_le_scan_param scan_param = {
-        .type       = BT_HCI_LE_SCAN_PASSIVE,
-        .filter_dup = BT_HCI_LE_SCAN_FILTER_DUP_ENABLE,
-        .interval   = MESH_SCAN_INTERVAL,
-        .window     = MESH_SCAN_WINDOW
+    struct bt_mesh_scan_param scan_param = {
+        .type       = BLE_MESH_SCAN_PASSIVE,
+        .filter_dup = BLE_MESH_SCAN_FILTER_DUP_ENABLE,
+        .interval   = BLE_MESH_SCAN_INTERVAL,
+        .window     = BLE_MESH_SCAN_WINDOW
     };
 
     BT_DBG("%s", __func__);
@@ -443,5 +429,3 @@ int bt_mesh_scan_disable(void)
 
     return bt_le_scan_stop();
 }
-
-#endif /* #if CONFIG_BT_MESH */

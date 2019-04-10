@@ -7,6 +7,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+#ifndef _CRYPTO_H_
+#define _CRYPTO_H_
+
 #include "mesh_types.h"
 #include <string.h>
 
@@ -36,10 +39,10 @@ static inline bool bt_mesh_s1(const char *m, u8_t salt[16])
 int bt_mesh_k1(const u8_t *ikm, size_t ikm_len, const u8_t salt[16],
                const char *info, u8_t okm[16]);
 
-#define bt_mesh_k1_str(ikm, ikm_len, salt_str, info, okm) \
-({ \
-    const u8_t salt[16] = salt_str; \
-    bt_mesh_k1(ikm, ikm_len, salt, info, okm); \
+#define bt_mesh_k1_str(ikm, ikm_len, salt_str, info, okm)   \
+({                                                          \
+    const u8_t salt[16] = salt_str;                         \
+    bt_mesh_k1(ikm, ikm_len, salt, info, okm);              \
 })
 
 int bt_mesh_k2(const u8_t n[16], const u8_t *p, size_t p_len,
@@ -157,7 +160,9 @@ int bt_mesh_prov_conf(const u8_t conf_key[16], const u8_t rand[16],
 int bt_mesh_prov_decrypt(const u8_t key[16], u8_t nonce[13],
                          const u8_t data[25 + 8], u8_t out[25]);
 
-#if CONFIG_BT_MESH_PROVISIONER
+#if CONFIG_BLE_MESH_PROVISIONER
 int bt_mesh_prov_encrypt(const u8_t key[16], u8_t nonce[13],
                          const u8_t data[25], u8_t out[33]);
 #endif
+
+#endif /* _CRYPTO_H_ */

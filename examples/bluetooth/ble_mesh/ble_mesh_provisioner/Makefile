@@ -3,7 +3,7 @@
 # project subdirectory.
 #
 
-PROJECT_NAME := bt_mesh_provisioner
+PROJECT_NAME := ble_mesh_provisioner
 
 COMPONENT_ADD_INCLUDEDIRS := components/include
 

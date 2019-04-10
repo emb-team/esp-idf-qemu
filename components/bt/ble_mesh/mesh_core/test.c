@@ -11,6 +11,8 @@
 #include <errno.h>
 
 #include "mesh_trace.h"
+#include "mesh_main.h"
+#include "mesh_access.h"
 
 #include "mesh.h"
 #include "test.h"
@@ -18,16 +20,14 @@
 #include "net.h"
 #include "foundation.h"
 #include "access.h"
-#include "mesh_main.h"
-#include "mesh_access.h"
 
-#if defined(CONFIG_BT_MESH_SELF_TEST)
+#if defined(CONFIG_BLE_MESH_SELF_TEST)
 
 int bt_mesh_test(void)
 {
     return 0;
 }
-#endif /* #if defined(CONFIG_BT_MESH_SELF_TEST) */
+#endif /* #if defined(CONFIG_BLE_MESH_SELF_TEST) */
 
 int bt_mesh_device_auto_enter_network(struct bt_mesh_device_network_info *info)
 {
@@ -40,8 +40,8 @@ int bt_mesh_device_auto_enter_network(struct bt_mesh_device_network_info *info)
     int i, j, k;
     int err;
 
-    if (info == NULL || !BT_MESH_ADDR_IS_UNICAST(info->unicast_addr) ||
-            !BT_MESH_ADDR_IS_GROUP(info->group_addr)) {
+    if (info == NULL || !BLE_MESH_ADDR_IS_UNICAST(info->unicast_addr) ||
+            !BLE_MESH_ADDR_IS_GROUP(info->group_addr)) {
         return -EINVAL;
     }
 
@@ -49,32 +49,32 @@ int bt_mesh_device_auto_enter_network(struct bt_mesh_device_network_info *info)
     err = bt_mesh_provision(info->net_key, info->net_idx, info->flags, info->iv_index,
                             0, info->unicast_addr, info->dev_key);
     if (err) {
-        BT_ERR("%s: bt_mesh_provision() fail, err %d", __func__, err);
+        BT_ERR("%s, bt_mesh_provision() failed (err %d)", __func__, err);
         return err;
     }
 
     /* Adds application key to device */
     sub = bt_mesh_subnet_get(info->net_idx);
     if (!sub) {
-        BT_ERR("%s: Failed to find subnet 0x%04x", __func__, info->net_idx);
+        BT_ERR("%s, Failed to find subnet 0x%04x", __func__, info->net_idx);
         return -ENODEV;
     }
 
     for (i = 0; i < ARRAY_SIZE(bt_mesh.app_keys); i++) {
         key = &bt_mesh.app_keys[i];
-        if (key->net_idx == BT_MESH_KEY_UNUSED) {
+        if (key->net_idx == BLE_MESH_KEY_UNUSED) {
             break;
         }
     }
     if (i == ARRAY_SIZE(bt_mesh.app_keys)) {
-        BT_ERR("%s: Failed to allocate app_key, app_idx 0x%04x", __func__, info->app_idx);
+        BT_ERR("%s, Failed to allocate memory, AppKeyIndex 0x%04x", __func__, info->app_idx);
         return -ENOMEM;
     }
 
     keys = sub->kr_flag ? &key->keys[1] : &key->keys[0];
 
     if (bt_mesh_app_id(info->app_key, &keys->id)) {
-        BT_ERR("%s: Failed to calculate AID, app_idx 0x%04x", __func__, info->app_idx);
+        BT_ERR("%s, Failed to calculate AID, AppKeyIndex 0x%04x", __func__, info->app_idx);
         return -EIO;
     }
 
@@ -85,7 +85,7 @@ int bt_mesh_device_auto_enter_network(struct bt_mesh_device_network_info *info)
     /* Binds AppKey with all non-config models, adds group address to all these models */
     comp = bt_mesh_comp_get();
     if (!comp) {
-        BT_ERR("%s: Composition data is NULL", __func__);
+        BT_ERR("%s, Composition data is NULL", __func__);
         return -ENODEV;
     }
 
@@ -93,18 +93,18 @@ int bt_mesh_device_auto_enter_network(struct bt_mesh_device_network_info *info)
         elem = &comp->elem[i];
         for (j = 0; j < elem->model_count; j++) {
             model = &elem->models[j];
-            if (model->id == BT_MESH_MODEL_ID_CFG_SRV ||
-                    model->id == BT_MESH_MODEL_ID_CFG_CLI) {
+            if (model->id == BLE_MESH_MODEL_ID_CFG_SRV ||
+                    model->id == BLE_MESH_MODEL_ID_CFG_CLI) {
                 continue;
             }
             for (k = 0; k < ARRAY_SIZE(model->keys); k++) {
-                if (model->keys[k] == BT_MESH_KEY_UNUSED) {
+                if (model->keys[k] == BLE_MESH_KEY_UNUSED) {
                     model->keys[k] = info->app_idx;
                     break;
                 }
             }
             for (k = 0; k < ARRAY_SIZE(model->groups); k++) {
-                if (model->groups[k] == BT_MESH_ADDR_UNASSIGNED) {
+                if (model->groups[k] == BLE_MESH_ADDR_UNASSIGNED) {
                     model->groups[k] = info->group_addr;
                     break;
                 }
@@ -113,13 +113,13 @@ int bt_mesh_device_auto_enter_network(struct bt_mesh_device_network_info *info)
         for (j = 0; j < elem->vnd_model_count; j++) {
             model = &elem->vnd_models[j];
             for (k = 0; k < ARRAY_SIZE(model->keys); k++) {
-                if (model->keys[k] == BT_MESH_KEY_UNUSED) {
+                if (model->keys[k] == BLE_MESH_KEY_UNUSED) {
                     model->keys[k] = info->app_idx;
                     break;
                 }
             }
             for (k = 0; k < ARRAY_SIZE(model->groups); k++) {
-                if (model->groups[k] == BT_MESH_ADDR_UNASSIGNED) {
+                if (model->groups[k] == BLE_MESH_ADDR_UNASSIGNED) {
                     model->groups[k] = info->group_addr;
                     break;
                 }

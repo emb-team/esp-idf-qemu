@@ -12,31 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <string.h>
+#include <stdint.h>
 #include <errno.h>
 
 #include "btc/btc_task.h"
 #include "btc/btc_manage.h"
-#include "osi/allocator.h"
 
-#include "esp_bt_defs.h"
 #include "esp_err.h"
+#include "esp_bt_defs.h"
 #include "esp_bt_main.h"
-#include "sdkconfig.h"
 
 #include "btc_ble_mesh_prov.h"
-
-#include "mesh.h"
-#include "mesh_buf.h"
-#include "transport.h"
 #include "esp_ble_mesh_defs.h"
-
-#if CONFIG_BT_MESH
 
 int32_t esp_ble_mesh_get_model_publish_period(esp_ble_mesh_model_t *model)
 {
     if (model == NULL) {
-        return -EINVAL;
+        return 0;
     }
     return btc_ble_mesh_model_pub_period_get(model);
 }
@@ -85,6 +77,4 @@ const esp_ble_mesh_comp_t *esp_ble_mesh_get_composition_data(void)
 {
     return btc_ble_mesh_comp_get();
 }
-
-#endif /* #if CONFIG_BT_MESH */
 

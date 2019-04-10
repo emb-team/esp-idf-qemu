@@ -140,7 +140,7 @@ void ble_mesh_prov_cb(esp_ble_mesh_prov_cb_event_t event, esp_ble_mesh_prov_cb_p
     case ESP_BLE_MESH_NODE_PROXY_GATT_DISABLE_COMP_EVT:
         ble_mesh_callback_check_err_code(param->node_proxy_gatt_disable_comp.err_code, "Node:DisProxyGatt");
         break;
-#if (CONFIG_BT_MESH_PROVISIONER)
+#if (CONFIG_BLE_MESH_PROVISIONER)
     case ESP_BLE_MESH_PROVISIONER_RECV_UNPROV_ADV_PKT_EVT:
         ESP_LOGI(TAG, "Provisioner recv unprovisioned device beacon:");
         ESP_LOG_BUFFER_HEX("Device UUID %s", param->provisioner_recv_unprov_adv_pkt.dev_uuid, 16);
@@ -209,12 +209,12 @@ void ble_mesh_model_cb(esp_ble_mesh_model_cb_event_t event, esp_ble_mesh_model_c
             if (param->model_operation.opcode == ESP_BLE_MESH_MODEL_OP_GEN_ONOFF_GET) {
                 ESP_LOGI(TAG, "Node:GetStatus,OK");
                 ble_mesh_node_get_state(status);
-                result = esp_ble_mesh_server_model_send_msg(param->model_operation.model, param->model_operation.ctx, BT_MESH_MODEL_OP_GEN_ONOFF_STATUS,
+                result = esp_ble_mesh_server_model_send_msg(param->model_operation.model, param->model_operation.ctx, ESP_BLE_MESH_MODEL_OP_GEN_ONOFF_STATUS,
                          sizeof(status), &status);
             } else if (param->model_operation.opcode == ESP_BLE_MESH_MODEL_OP_GEN_ONOFF_SET) {
                 ble_mesh_node_set_state(param->model_operation.msg[0]);
                 ESP_LOGI(TAG, "Node:SetAck,OK,%d,%d", param->model_operation.msg[0], param->model_operation.ctx->recv_ttl);
-                result = esp_ble_mesh_server_model_send_msg(param->model_operation.model, param->model_operation.ctx, BT_MESH_MODEL_OP_GEN_ONOFF_STATUS,
+                result = esp_ble_mesh_server_model_send_msg(param->model_operation.model, param->model_operation.ctx, ESP_BLE_MESH_MODEL_OP_GEN_ONOFF_STATUS,
                          sizeof(status), param->model_operation.msg);
             } else if (param->model_operation.opcode == ESP_BLE_MESH_MODEL_OP_GEN_ONOFF_SET_UNACK) {
                 ble_mesh_node_set_state(param->model_operation.msg[0]);
@@ -315,7 +315,7 @@ static int ble_mesh_load_oob(int argc, char **argv)
     }
 
     //parsing prov
-#if CONFIG_BT_MESH_NODE
+#if CONFIG_BLE_MESH_NODE
     prov.uuid = dev_uuid;
     memcpy(dev_uuid, esp_bt_dev_get_address(), 6);
     if (oob.static_val->count != 0) {
@@ -334,7 +334,7 @@ static int ble_mesh_load_oob(int argc, char **argv)
     arg_int_to_value(oob.input_actions, prov.input_actions, "input actions");
 #endif
 
-#if CONFIG_BT_MESH_PROVISIONER
+#if CONFIG_BLE_MESH_PROVISIONER
     if (oob.static_val->count != 0) {
         static_val = malloc(oob.static_val_len->ival[0] + 1);
         if (static_val == NULL) {

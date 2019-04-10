@@ -241,10 +241,10 @@ struct esp_ble_mesh_model {
     esp_ble_mesh_model_pub_t *const pub;
 
     /* AppKey List */
-    uint16_t keys[CONFIG_BT_MESH_MODEL_KEY_COUNT];
+    uint16_t keys[CONFIG_BLE_MESH_MODEL_KEY_COUNT];
 
     /* Subscription List (group or virtual addresses) */
-    uint16_t groups[CONFIG_BT_MESH_MODEL_GROUP_COUNT];
+    uint16_t groups[CONFIG_BLE_MESH_MODEL_GROUP_COUNT];
 
     /* Model operation context */
     esp_ble_mesh_model_op_t *op;

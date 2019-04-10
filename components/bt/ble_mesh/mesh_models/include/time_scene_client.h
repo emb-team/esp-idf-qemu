@@ -16,13 +16,13 @@
  *  @brief Bluetooth Mesh Time and Scene Client Model APIs.
  */
 
-#ifndef __BT_MESH_TIME_SCENE_CLI_H
-#define __BT_MESH_TIME_SCENE_CLI_H
+#ifndef _TIME_SCENE_CLIENT_H_
+#define _TIME_SCENE_CLIENT_H_
 
 #include "mesh_access.h"
 #include "mesh_kernel.h"
-#include "common.h"
-#include "bt_mesh_client_common.h"
+
+#include "model_common.h"
 
 /* Time scene client model common structure */
 typedef bt_mesh_client_common_t bt_mesh_time_scene_client_t;
@@ -31,7 +31,7 @@ typedef bt_mesh_internal_data_t time_scene_internal_data_t;
 /* Time Client Model Context */
 extern const struct bt_mesh_model_op time_cli_op[];
 
-/** @def BT_MESH_MODEL_TIME_CLI
+/** @def BLE_MESH_MODEL_TIME_CLI
  *
  *  Define a new time client model. Note that this API needs to
  *  be repeated for each element which the application wants to
@@ -41,8 +41,8 @@ extern const struct bt_mesh_model_op time_cli_op[];
  *
  *  @return New time client model instance.
  */
-#define BT_MESH_MODEL_TIME_CLI(cli_pub, cli_data) \
-        BT_MESH_MODEL(BT_MESH_MODEL_ID_TIME_CLI,  \
+#define BLE_MESH_MODEL_TIME_CLI(cli_pub, cli_data)      \
+        BLE_MESH_MODEL(BLE_MESH_MODEL_ID_TIME_CLI,      \
                     time_cli_op, cli_pub, cli_data)
 
 typedef bt_mesh_client_common_t bt_mesh_time_cli_t;
@@ -101,7 +101,7 @@ struct bt_mesh_time_role_set {
 /* Scene Client Model Context */
 extern const struct bt_mesh_model_op scene_cli_op[];
 
-/** @def BT_MESH_MODEL_SCENE_CLI
+/** @def BLE_MESH_MODEL_SCENE_CLI
  *
  *  Define a new scene client model. Note that this API needs to
  *  be repeated for each element which the application wants to
@@ -111,8 +111,8 @@ extern const struct bt_mesh_model_op scene_cli_op[];
  *
  *  @return New scene client model instance.
  */
-#define BT_MESH_MODEL_SCENE_CLI(cli_pub, cli_data) \
-        BT_MESH_MODEL(BT_MESH_MODEL_ID_SCENE_CLI,  \
+#define BLE_MESH_MODEL_SCENE_CLI(cli_pub, cli_data)     \
+        BLE_MESH_MODEL(BLE_MESH_MODEL_ID_SCENE_CLI,     \
                     scene_cli_op, cli_pub, cli_data)
 
 typedef bt_mesh_client_common_t bt_mesh_scene_cli_t;
@@ -150,7 +150,7 @@ struct bt_mesh_scene_delete {
 /* Scheduler Client Model Context */
 extern const struct bt_mesh_model_op scheduler_cli_op[];
 
-/** @def BT_MESH_MODEL_SCHEDULER_CLI
+/** @def BLE_MESH_MODEL_SCHEDULER_CLI
  *
  *  Define a new scheduler client model. Note that this API needs to
  *  be repeated for each element which the application wants to
@@ -160,8 +160,8 @@ extern const struct bt_mesh_model_op scheduler_cli_op[];
  *
  *  @return New scheduler client model instance.
  */
-#define BT_MESH_MODEL_SCHEDULER_CLI(cli_pub, cli_data) \
-        BT_MESH_MODEL(BT_MESH_MODEL_ID_SCHEDULER_CLI,  \
+#define BLE_MESH_MODEL_SCHEDULER_CLI(cli_pub, cli_data)     \
+        BLE_MESH_MODEL(BLE_MESH_MODEL_ID_SCHEDULER_CLI,     \
                     scheduler_cli_op, cli_pub, cli_data)
 
 typedef bt_mesh_client_common_t bt_mesh_scheduler_cli_t;
@@ -254,4 +254,4 @@ int bt_mesh_time_scene_client_get_state(struct bt_mesh_common_param *common, voi
  */
 int bt_mesh_time_scene_client_set_state(struct bt_mesh_common_param *common, void *set, void *status);
 
-#endif /* __BT_MESH_TIME_SCENE_CLI_H */
+#endif /* _TIME_SCENE_CLIENT_H_ */

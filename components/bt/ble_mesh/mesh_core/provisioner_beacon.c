@@ -15,15 +15,12 @@
 #include <errno.h>
 #include <string.h>
 
-#include "mesh_util.h"
-
-#include "mesh_buf.h"
 #include "sdkconfig.h"
+#define BT_DBG_ENABLED IS_ENABLED(CONFIG_BLE_MESH_DEBUG_BEACON)
+
+#include "mesh_util.h"
+#include "mesh_buf.h"
 #include "mesh_main.h"
-
-#if CONFIG_BT_MESH
-
-#define BT_DBG_ENABLED IS_ENABLED(CONFIG_BT_MESH_DEBUG_BEACON)
 #include "mesh_trace.h"
 
 #include "adv.h"
@@ -33,17 +30,16 @@
 #include "crypto.h"
 #include "beacon.h"
 #include "foundation.h"
-
 #include "provisioner_prov.h"
 
 #define BEACON_TYPE_UNPROVISIONED  0x00
 #define BEACON_TYPE_SECURE         0x01
 
-#if CONFIG_BT_MESH_PROVISIONER
+#if CONFIG_BLE_MESH_PROVISIONER
 
 static void provisioner_secure_beacon_recv(struct net_buf_simple *buf)
 {
-    // TODO: Provisioner receive and handle Secure Beacon
+    // TODO: Provisioner receive and handle Secure Network Beacon
 }
 
 void provisioner_beacon_recv(struct net_buf_simple *buf)
@@ -53,7 +49,7 @@ void provisioner_beacon_recv(struct net_buf_simple *buf)
     BT_DBG("%u bytes: %s", buf->len, bt_hex(buf->data, buf->len));
 
     if (buf->len < 1) {
-        BT_ERR("Too short beacon");
+        BT_ERR("%s, Too short beacon", __func__);
         return;
     }
 
@@ -67,11 +63,9 @@ void provisioner_beacon_recv(struct net_buf_simple *buf)
         provisioner_secure_beacon_recv(buf);
         break;
     default:
-        BT_WARN("%s, Unknown beacon type 0x%02x", __func__, type);
+        BT_DBG("%s, Unknown beacon type 0x%02x", __func__, type);
         break;
     }
 }
 
-#endif /* CONFIG_BT_MESH_PROVISIONER */
-
-#endif /* #if CONFIG_BT_MESH */
+#endif /* CONFIG_BLE_MESH_PROVISIONER */

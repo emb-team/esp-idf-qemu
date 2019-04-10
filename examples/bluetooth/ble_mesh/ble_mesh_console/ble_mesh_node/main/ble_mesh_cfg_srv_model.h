@@ -18,9 +18,9 @@
 #include "esp_ble_mesh_defs.h"
 #include "esp_ble_mesh_config_model_api.h"
 
-#if (CONFIG_BT_MESH_GENERIC_ONOFF_CLI)
+#if (CONFIG_BLE_MESH_GENERIC_ONOFF_CLI)
 #include "esp_ble_mesh_generic_model_api.h"
-#endif //CONFIG_BT_MESH_GENERIC_ONOFF_CLI
+#endif //CONFIG_BLE_MESH_GENERIC_ONOFF_CLI
 
 #define NODE_MAX_GROUP_CONFIG 3
 #define CID_ESP 0x02C4
@@ -66,7 +66,7 @@ extern esp_ble_mesh_elem_t gen_onoff_srv_elements[];
 extern esp_ble_mesh_comp_t gen_onoff_srv_comp;
 
 // config generic onoff client
-#if (CONFIG_BT_MESH_GENERIC_ONOFF_CLI)
+#if (CONFIG_BLE_MESH_GENERIC_ONOFF_CLI)
 
 extern esp_ble_mesh_client_t gen_onoff_cli;
 
@@ -75,7 +75,7 @@ extern esp_ble_mesh_model_t gen_onoff_cli_models[];
 extern esp_ble_mesh_elem_t gen_onoff_cli_elements[];
 
 extern esp_ble_mesh_comp_t gen_onoff_cli_comp;
-#endif //CONFIG_BT_MESH_GENERIC_ONOFF_CLI
+#endif //CONFIG_BLE_MESH_GENERIC_ONOFF_CLI
 
 //CONFIG VENDOR MODEL TEST PERFORMANCE
 #define ESP_BLE_MESH_VND_MODEL_ID_TEST_PERF_SRV 0x2000

@@ -16,13 +16,13 @@
  *  @brief Bluetooth Mesh Generic Client Model APIs.
  */
 
-#ifndef __BT_MESH_GENERIC_CLI_H
-#define __BT_MESH_GENERIC_CLI_H
+#ifndef _GENERIC_CLIENT_H_
+#define _GENERIC_CLIENT_H_
 
 #include "mesh_access.h"
 #include "mesh_kernel.h"
-#include "common.h"
-#include "bt_mesh_client_common.h"
+
+#include "model_common.h"
 
 /* Generic client model common structure */
 typedef bt_mesh_client_common_t bt_mesh_generic_client_t;
@@ -31,7 +31,7 @@ typedef bt_mesh_internal_data_t generic_internal_data_t;
 /* Generic OnOff Client Model Context */
 extern const struct bt_mesh_model_op gen_onoff_cli_op[];
 
-/** @def BT_MESH_MODEL_GEN_ONOFF_CLI
+/** @def BLE_MESH_MODEL_GEN_ONOFF_CLI
  *
  *  Define a new generic onoff client model. Note that this API
  *  needs to be repeated for each element which the application
@@ -41,8 +41,8 @@ extern const struct bt_mesh_model_op gen_onoff_cli_op[];
  *
  *  @return New generic onoff client model instance.
  */
-#define BT_MESH_MODEL_GEN_ONOFF_CLI(cli_pub, cli_data) \
-        BT_MESH_MODEL(BT_MESH_MODEL_ID_GEN_ONOFF_CLI,  \
+#define BLE_MESH_MODEL_GEN_ONOFF_CLI(cli_pub, cli_data)     \
+        BLE_MESH_MODEL(BLE_MESH_MODEL_ID_GEN_ONOFF_CLI,     \
                     gen_onoff_cli_op, cli_pub, cli_data)
 
 typedef bt_mesh_client_common_t bt_mesh_gen_onoff_cli_t;
@@ -65,7 +65,7 @@ struct bt_mesh_gen_onoff_set {
 /* Generic Level Client Model Context */
 extern const struct bt_mesh_model_op gen_level_cli_op[];
 
-/** @def BT_MESH_MODEL_GEN_LEVEL_CLI
+/** @def BLE_MESH_MODEL_GEN_LEVEL_CLI
  *
  *  Define a new generic level client model. Note that this API
  *  needs to be repeated for each element which the application
@@ -75,8 +75,8 @@ extern const struct bt_mesh_model_op gen_level_cli_op[];
  *
  *  @return New generic level client model instance.
  */
-#define BT_MESH_MODEL_GEN_LEVEL_CLI(cli_pub, cli_data) \
-        BT_MESH_MODEL(BT_MESH_MODEL_ID_GEN_LEVEL_CLI,  \
+#define BLE_MESH_MODEL_GEN_LEVEL_CLI(cli_pub, cli_data)     \
+        BLE_MESH_MODEL(BLE_MESH_MODEL_ID_GEN_LEVEL_CLI,     \
                     gen_level_cli_op, cli_pub, cli_data)
 
 typedef bt_mesh_client_common_t bt_mesh_gen_level_cli_t;
@@ -115,7 +115,7 @@ struct bt_mesh_gen_move_set {
 /* Generic Default Transition Time Client Model Context */
 extern const struct bt_mesh_model_op gen_def_trans_time_cli_op[];
 
-/** @def BT_MESH_MODEL_GEN_DEF_TRANS_TIME_CLI
+/** @def BLE_MESH_MODEL_GEN_DEF_TRANS_TIME_CLI
  *
  *  Define a new generic default transition time client model. Note
  *  that this API needs to be repeated for each element that the
@@ -126,8 +126,8 @@ extern const struct bt_mesh_model_op gen_def_trans_time_cli_op[];
  *
  *  @return New generic default transition time client model instance.
  */
-#define BT_MESH_MODEL_GEN_DEF_TRANS_TIME_CLI(cli_pub, cli_data) \
-        BT_MESH_MODEL(BT_MESH_MODEL_ID_GEN_DEF_TRANS_TIME_CLI,  \
+#define BLE_MESH_MODEL_GEN_DEF_TRANS_TIME_CLI(cli_pub, cli_data)    \
+        BLE_MESH_MODEL(BLE_MESH_MODEL_ID_GEN_DEF_TRANS_TIME_CLI,    \
                     gen_def_trans_time_cli_op, cli_pub, cli_data)
 
 typedef bt_mesh_client_common_t bt_mesh_gen_def_trans_time_cli_t;
@@ -143,7 +143,7 @@ struct bt_mesh_gen_def_trans_time_status {
 /* Generic Power OnOff Client Model Context */
 extern const struct bt_mesh_model_op gen_power_onoff_cli_op[];
 
-/** @def BT_MESH_MODEL_GEN_POWER_ONOFF_CLI
+/** @def BLE_MESH_MODEL_GEN_POWER_ONOFF_CLI
  *
  *  Define a new generic power onoff client model. Note that this API
  *  needs to be repeated for each element which the application wants
@@ -153,8 +153,8 @@ extern const struct bt_mesh_model_op gen_power_onoff_cli_op[];
  *
  *  @return New generic power onoff client model instance.
  */
-#define BT_MESH_MODEL_GEN_POWER_ONOFF_CLI(cli_pub, cli_data)  \
-        BT_MESH_MODEL(BT_MESH_MODEL_ID_GEN_POWER_ONOFF_CLI, \
+#define BLE_MESH_MODEL_GEN_POWER_ONOFF_CLI(cli_pub, cli_data)   \
+        BLE_MESH_MODEL(BLE_MESH_MODEL_ID_GEN_POWER_ONOFF_CLI,   \
                     gen_power_onoff_cli_op, cli_pub, cli_data)
 
 typedef bt_mesh_client_common_t bt_mesh_gen_power_onoff_cli_t;
@@ -170,7 +170,7 @@ struct bt_mesh_gen_onpowerup_status {
 /* Generic Power Level Client Model Context */
 extern const struct bt_mesh_model_op gen_power_level_cli_op[];
 
-/** @def BT_MESH_MODEL_GEN_POWER_LEVEL_CLI
+/** @def BLE_MESH_MODEL_GEN_POWER_LEVEL_CLI
  *
  *  Define a new generic power level client model. Note that this API
  *  needs to be repeated for each element which the application wants
@@ -180,8 +180,8 @@ extern const struct bt_mesh_model_op gen_power_level_cli_op[];
  *
  *  @return New generic power level client model instance.
  */
-#define BT_MESH_MODEL_GEN_POWER_LEVEL_CLI(cli_pub, cli_data)  \
-        BT_MESH_MODEL(BT_MESH_MODEL_ID_GEN_POWER_LEVEL_CLI, \
+#define BLE_MESH_MODEL_GEN_POWER_LEVEL_CLI(cli_pub, cli_data)   \
+        BLE_MESH_MODEL(BLE_MESH_MODEL_ID_GEN_POWER_LEVEL_CLI,   \
                     gen_power_level_cli_op, cli_pub, cli_data)
 
 typedef bt_mesh_client_common_t bt_mesh_gen_power_level_cli_t;
@@ -227,7 +227,7 @@ struct bt_mesh_gen_power_range_set {
 /* Generic Battery Client Model Context */
 extern const struct bt_mesh_model_op gen_battery_cli_op[];
 
-/** @def BT_MESH_MODEL_GEN_BATTERY_CLI
+/** @def BLE_MESH_MODEL_GEN_BATTERY_CLI
  *
  *  Define a new generic battery client model. Note that this API
  *  needs to be repeated for each element which the application
@@ -237,8 +237,8 @@ extern const struct bt_mesh_model_op gen_battery_cli_op[];
  *
  *  @return New generic battery client model instance.
  */
-#define BT_MESH_MODEL_GEN_BATTERY_CLI(cli_pub, cli_data) \
-        BT_MESH_MODEL(BT_MESH_MODEL_ID_GEN_BATTERY_CLI,  \
+#define BLE_MESH_MODEL_GEN_BATTERY_CLI(cli_pub, cli_data)   \
+        BLE_MESH_MODEL(BLE_MESH_MODEL_ID_GEN_BATTERY_CLI,   \
                     gen_battery_cli_op, cli_pub, cli_data)
 
 typedef bt_mesh_client_common_t bt_mesh_gen_battery_cli_t;
@@ -253,7 +253,7 @@ struct bt_mesh_gen_battery_status {
 /* Generic Location Client Model Context */
 extern const struct bt_mesh_model_op gen_location_cli_op[];
 
-/** @def BT_MESH_MODEL_GEN_LOCATION_CLI
+/** @def BLE_MESH_MODEL_GEN_LOCATION_CLI
  *
  *  Define a new generic location client model. Note that this API
  *  needs to be repeated for each element which the application
@@ -263,8 +263,8 @@ extern const struct bt_mesh_model_op gen_location_cli_op[];
  *
  *  @return New generic location client model instance.
  */
-#define BT_MESH_MODEL_GEN_LOCATION_CLI(cli_pub, cli_data) \
-        BT_MESH_MODEL(BT_MESH_MODEL_ID_GEN_LOCATION_CLI,  \
+#define BLE_MESH_MODEL_GEN_LOCATION_CLI(cli_pub, cli_data)  \
+        BLE_MESH_MODEL(BLE_MESH_MODEL_ID_GEN_LOCATION_CLI,  \
                     gen_location_cli_op, cli_pub, cli_data)
 
 typedef bt_mesh_client_common_t bt_mesh_gen_location_cli_t;
@@ -300,7 +300,7 @@ struct bt_mesh_gen_loc_local_set {
 /* Generic Property Client Model Context */
 extern const struct bt_mesh_model_op gen_property_cli_op[];
 
-/** @def BT_MESH_MODEL_GEN_LOCATION_CLI
+/** @def BLE_MESH_MODEL_GEN_LOCATION_CLI
  *
  *  Define a new generic location client model. Note that this API
  *  needs to be repeated for each element which the application
@@ -310,8 +310,8 @@ extern const struct bt_mesh_model_op gen_property_cli_op[];
  *
  *  @return New generic location client model instance.
  */
-#define BT_MESH_MODEL_GEN_PROPERTY_CLI(cli_pub, cli_data) \
-        BT_MESH_MODEL(BT_MESH_MODEL_ID_GEN_PROP_CLI,      \
+#define BLE_MESH_MODEL_GEN_PROPERTY_CLI(cli_pub, cli_data)  \
+        BLE_MESH_MODEL(BLE_MESH_MODEL_ID_GEN_PROP_CLI,      \
                     gen_property_cli_op, cli_pub, cli_data)
 
 typedef bt_mesh_client_common_t bt_mesh_gen_property_cli_t;
@@ -488,4 +488,4 @@ int bt_mesh_generic_client_get_state(struct bt_mesh_common_param *common, void *
  */
 int bt_mesh_generic_client_set_state(struct bt_mesh_common_param *common, void *set, void *status);
 
-#endif /* __BT_MESH_GENERIC_CLI_H */
+#endif /* _GENERIC_CLIENT_H_ */

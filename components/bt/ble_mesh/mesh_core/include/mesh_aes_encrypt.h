@@ -46,8 +46,8 @@
  *              2) call tc_aes_encrypt/decrypt to process the data.
  */
 
-#ifndef __TC_AES_H__
-#define __TC_AES_H__
+#ifndef _BLE_MESH_AES_ENCRYPT_H_
+#define _BLE_MESH_AES_ENCRYPT_H_
 
 #include <stdint.h>
 #include <stddef.h>
@@ -59,16 +59,16 @@ extern "C" {
 #define Nb (4)  /* number of columns (32-bit words) comprising the state */
 #define Nk (4)  /* number of 32-bit words comprising the key */
 #define Nr (10) /* number of rounds */
-#define TC_AES_BLOCK_SIZE (Nb*Nk)
-#define TC_AES_KEY_SIZE (Nb*Nk)
+#define TC_AES_BLOCK_SIZE   (Nb*Nk)
+#define TC_AES_KEY_SIZE     (Nb*Nk)
 
-#define TC_CRYPTO_SUCCESS 1
-#define TC_CRYPTO_FAIL 0
+#define TC_CRYPTO_SUCCESS   1
+#define TC_CRYPTO_FAIL      0
 
-#define TC_ZERO_BYTE 0x00
+#define TC_ZERO_BYTE        0x00
 
 /* padding for last message block */
-#define TC_CMAC_PADDING 0x80
+#define TC_CMAC_PADDING     0x80
 
 typedef struct tc_aes_key_sched_struct {
     unsigned int words[Nb * (Nr + 1)];
@@ -93,7 +93,6 @@ typedef struct tc_cmac_struct {
     /* calls to tc_cmac_update left before re-key */
     uint64_t countdown;
 } *TCCmacState_t;
-
 
 /**
  *  @brief Set AES-128 encryption key
@@ -169,4 +168,4 @@ int tc_cmac_erase(TCCmacState_t s);
 }
 #endif
 
-#endif /* __TC_AES_H__ */
+#endif /* _BLE_MESH_AES_ENCRYPT_H_ */

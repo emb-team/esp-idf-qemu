@@ -22,7 +22,7 @@
 #include "mesh_kernel.h"
 #include "sdkconfig.h"
 
-#if CONFIG_BT_MESH
+#ifndef CONFIG_ATOMIC_OPERATIONS_BUILTIN
 
 /**
 *
@@ -36,7 +36,7 @@
 *
 * @return The value read from <target>
 */
-atomic_val_t atomic_get(const atomic_t *target)
+bt_mesh_atomic_val_t bt_mesh_atomic_get(const bt_mesh_atomic_t *target)
 {
     return *target;
 }
@@ -53,17 +53,17 @@ atomic_val_t atomic_get(const atomic_t *target)
  *
  * @return The previous value from <target>
  */
-atomic_val_t atomic_set(atomic_t *target, atomic_val_t value)
+bt_mesh_atomic_val_t bt_mesh_atomic_set(bt_mesh_atomic_t *target, bt_mesh_atomic_val_t value)
 {
     unsigned int key;
-    atomic_val_t ret;
+    bt_mesh_atomic_val_t ret;
 
-    key = irq_lock();
+    key = bt_mesh_irq_lock();
 
     ret = *target;
     *target = value;
 
-    irq_unlock(key);
+    bt_mesh_irq_unlock(key);
 
     return ret;
 }
@@ -81,17 +81,17 @@ atomic_val_t atomic_set(atomic_t *target, atomic_val_t value)
  *
  * @return The previous value from <target>
  */
-atomic_val_t atomic_or(atomic_t *target, atomic_val_t value)
+bt_mesh_atomic_val_t bt_mesh_atomic_or(bt_mesh_atomic_t *target, bt_mesh_atomic_val_t value)
 {
     unsigned int key;
-    atomic_val_t ret;
+    bt_mesh_atomic_val_t ret;
 
-    key = irq_lock();
+    key = bt_mesh_irq_lock();
 
     ret = *target;
     *target |= value;
 
-    irq_unlock(key);
+    bt_mesh_irq_unlock(key);
 
     return ret;
 }
@@ -109,17 +109,17 @@ atomic_val_t atomic_or(atomic_t *target, atomic_val_t value)
  *
  * @return The previous value from <target>
  */
-atomic_val_t atomic_and(atomic_t *target, atomic_val_t value)
+bt_mesh_atomic_val_t bt_mesh_atomic_and(bt_mesh_atomic_t *target, bt_mesh_atomic_val_t value)
 {
     unsigned int key;
-    atomic_val_t ret;
+    bt_mesh_atomic_val_t ret;
 
-    key = irq_lock();
+    key = bt_mesh_irq_lock();
 
     ret = *target;
     *target &= value;
 
-    irq_unlock(key);
+    bt_mesh_irq_unlock(key);
 
     return ret;
 }
@@ -135,17 +135,17 @@ atomic_val_t atomic_and(atomic_t *target, atomic_val_t value)
  *
  * @return The value from <target> prior to the decrement
  */
-atomic_val_t atomic_dec(atomic_t *target)
+bt_mesh_atomic_val_t bt_mesh_atomic_dec(bt_mesh_atomic_t *target)
 {
     unsigned int key;
-    atomic_val_t ret;
+    bt_mesh_atomic_val_t ret;
 
-    key = irq_lock();
+    key = bt_mesh_irq_lock();
 
     ret = *target;
     (*target)--;
 
-    irq_unlock(key);
+    bt_mesh_irq_unlock(key);
 
     return ret;
 }
@@ -161,20 +161,19 @@ atomic_val_t atomic_dec(atomic_t *target)
  *
  * @return The value from <target> before the increment
  */
-atomic_val_t atomic_inc(atomic_t *target)
+bt_mesh_atomic_val_t bt_mesh_atomic_inc(bt_mesh_atomic_t *target)
 {
     unsigned int key;
-    atomic_val_t ret;
+    bt_mesh_atomic_val_t ret;
 
-    key = irq_lock();
+    key = bt_mesh_irq_lock();
 
     ret = *target;
     (*target)++;
 
-    irq_unlock(key);
+    bt_mesh_irq_unlock(key);
 
     return ret;
 }
 
-#endif /* #if CONFIG_BT_MESH */
-
+#endif /* #ifndef CONFIG_ATOMIC_OPERATIONS_BUILTIN */

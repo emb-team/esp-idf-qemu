@@ -17,8 +17,6 @@
 
 #include "esp_ble_mesh_defs.h"
 
-#if CONFIG_BT_MESH
-
 /**
  * @brief         Get the model publish period, the unit is ms.
  *
@@ -112,6 +110,4 @@ esp_ble_mesh_model_t *esp_ble_mesh_find_sig_model(esp_ble_mesh_elem_t *element, 
  */
 const esp_ble_mesh_comp_t *esp_ble_mesh_get_composition_data(void);
 
-#endif /* #if CONFIG_BT_MESH */
 #endif /* _ESP_BLE_MESH_LOCAL_DATA_OPERATION_API_H_ */
-

@@ -14,8 +14,8 @@
  * calls to functions must be protected with synchronization primitives.
  */
 
-#ifndef __SLIST_H__
-#define __SLIST_H__
+#ifndef _BLE_MESH_SLIST_H_
+#define _BLE_MESH_SLIST_H_
 
 #include <stddef.h>
 #include <stdbool.h>
@@ -24,7 +24,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-
 
 struct _snode {
     struct _snode *next;
@@ -54,8 +53,8 @@ typedef struct _slist sys_slist_t;
  * @param __sl A pointer on a sys_slist_t to iterate on
  * @param __sn A sys_snode_t pointer to peek each node of the list
  */
-#define SYS_SLIST_FOR_EACH_NODE(__sl, __sn)             \
-    for (__sn = sys_slist_peek_head(__sl); __sn;            \
+#define SYS_SLIST_FOR_EACH_NODE(__sl, __sn)         \
+    for (__sn = sys_slist_peek_head(__sl); __sn;    \
          __sn = sys_slist_peek_next(__sn))
 
 /**
@@ -79,9 +78,9 @@ typedef struct _slist sys_slist_t;
  *             it contains the starting node, or NULL to start from the head
  */
 #define SYS_SLIST_ITERATE_FROM_NODE(__sl, __sn)             \
-    for (__sn = __sn ? sys_slist_peek_next_no_check(__sn)       \
-             : sys_slist_peek_head(__sl);           \
-         __sn;                          \
+    for (__sn = __sn ? sys_slist_peek_next_no_check(__sn)   \
+             : sys_slist_peek_head(__sl);                   \
+         __sn;                                              \
          __sn = sys_slist_peek_next(__sn))
 
 /**
@@ -100,10 +99,10 @@ typedef struct _slist sys_slist_t;
  * @param __sn A sys_snode_t pointer to peek each node of the list
  * @param __sns A sys_snode_t pointer for the loop to run safely
  */
-#define SYS_SLIST_FOR_EACH_NODE_SAFE(__sl, __sn, __sns)         \
+#define SYS_SLIST_FOR_EACH_NODE_SAFE(__sl, __sn, __sns) \
     for (__sn = sys_slist_peek_head(__sl),              \
              __sns = sys_slist_peek_next(__sn);         \
-         __sn; __sn = __sns,                    \
+         __sn; __sn = __sns,                            \
              __sns = sys_slist_peek_next(__sn))
 
 /*
@@ -114,8 +113,8 @@ typedef struct _slist sys_slist_t;
  * @param __cn Container struct type pointer
  * @param __n The field name of sys_node_t within the container struct
  */
-#define SYS_SLIST_CONTAINER(__ln, __cn, __n) \
-    ((__ln) ? CONTAINER_OF((__ln), __typeof__(*(__cn)), __n) : NULL)
+#define SYS_SLIST_CONTAINER(__ln, __cn, __n)    \
+        ((__ln) ? CONTAINER_OF((__ln), __typeof__(*(__cn)), __n) : NULL)
 /*
  * @brief Provide the primitive to peek container of the list head
  *
@@ -123,8 +122,8 @@ typedef struct _slist sys_slist_t;
  * @param __cn Container struct type pointer
  * @param __n The field name of sys_node_t within the container struct
  */
-#define SYS_SLIST_PEEK_HEAD_CONTAINER(__sl, __cn, __n) \
-    SYS_SLIST_CONTAINER(sys_slist_peek_head(__sl), __cn, __n)
+#define SYS_SLIST_PEEK_HEAD_CONTAINER(__sl, __cn, __n)  \
+        SYS_SLIST_CONTAINER(sys_slist_peek_head(__sl), __cn, __n)
 
 /*
  * @brief Provide the primitive to peek container of the list tail
@@ -133,8 +132,8 @@ typedef struct _slist sys_slist_t;
  * @param __cn Container struct type pointer
  * @param __n The field name of sys_node_t within the container struct
  */
-#define SYS_SLIST_PEEK_TAIL_CONTAINER(__sl, __cn, __n) \
-    SYS_SLIST_CONTAINER(sys_slist_peek_tail(__sl), __cn, __n)
+#define SYS_SLIST_PEEK_TAIL_CONTAINER(__sl, __cn, __n)  \
+        SYS_SLIST_CONTAINER(sys_slist_peek_tail(__sl), __cn, __n)
 
 /*
  * @brief Provide the primitive to peek the next container
@@ -143,9 +142,9 @@ typedef struct _slist sys_slist_t;
  * @param __n The field name of sys_node_t within the container struct
  */
 
-#define SYS_SLIST_PEEK_NEXT_CONTAINER(__cn, __n) \
-    ((__cn) ? SYS_SLIST_CONTAINER(sys_slist_peek_next(&((__cn)->__n)), \
-                      __cn, __n) : NULL)
+#define SYS_SLIST_PEEK_NEXT_CONTAINER(__cn, __n)                            \
+        ((__cn) ? SYS_SLIST_CONTAINER(sys_slist_peek_next(&((__cn)->__n)),  \
+                __cn, __n) : NULL)
 
 /**
  * @brief Provide the primitive to iterate on a list under a container
@@ -161,8 +160,8 @@ typedef struct _slist sys_slist_t;
  * @param __cn A pointer to peek each entry of the list
  * @param __n The field name of sys_node_t within the container struct
  */
-#define SYS_SLIST_FOR_EACH_CONTAINER(__sl, __cn, __n)           \
-    for (__cn = SYS_SLIST_PEEK_HEAD_CONTAINER(__sl, __cn, __n); __cn; \
+#define SYS_SLIST_FOR_EACH_CONTAINER(__sl, __cn, __n)                   \
+    for (__cn = SYS_SLIST_PEEK_HEAD_CONTAINER(__sl, __cn, __n); __cn;   \
          __cn = SYS_SLIST_PEEK_NEXT_CONTAINER(__cn, __n))
 
 /**
@@ -181,7 +180,7 @@ typedef struct _slist sys_slist_t;
  * @param __n The field name of sys_node_t within the container struct
  */
 #define SYS_SLIST_FOR_EACH_CONTAINER_SAFE(__sl, __cn, __cns, __n)   \
-    for (__cn = SYS_SLIST_PEEK_HEAD_CONTAINER(__sl, __cn, __n), \
+    for (__cn = SYS_SLIST_PEEK_HEAD_CONTAINER(__sl, __cn, __n),     \
          __cns = SYS_SLIST_PEEK_NEXT_CONTAINER(__cn, __n); __cn;    \
          __cn = __cns, __cns = SYS_SLIST_PEEK_NEXT_CONTAINER(__cn, __n))
 
@@ -461,10 +460,9 @@ static inline bool sys_slist_find_and_remove(sys_slist_t *list,
     return false;
 }
 
-
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* __SLIST_H__ */
+#endif /* _BLE_MESH_SLIST_H_ */
 

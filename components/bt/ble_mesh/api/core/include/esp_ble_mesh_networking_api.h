@@ -17,8 +17,6 @@
 
 #include "esp_ble_mesh_defs.h"
 
-#if CONFIG_BT_MESH
-
 /** @brief: event, event code of user-defined model events; param, parameters of user-defined model events */
 typedef void (* esp_ble_mesh_model_cb_t)(esp_ble_mesh_model_cb_event_t event,
         esp_ble_mesh_model_cb_param_t *param);
@@ -150,7 +148,7 @@ esp_err_t esp_ble_mesh_model_publish(esp_ble_mesh_model_t *model, uint32_t opcod
  */
 esp_err_t esp_ble_mesh_node_local_reset(void);
 
-#if defined(CONFIG_BT_MESH_PROVISIONER)
+#if defined(CONFIG_BLE_MESH_PROVISIONER)
 /**
  * @brief        This function is called to set the node (provisioned device) name.
  *
@@ -256,7 +254,7 @@ esp_err_t esp_ble_mesh_provisioner_add_local_net_key(const uint8_t net_key[16], 
  */
 const uint8_t *esp_ble_mesh_provisioner_get_local_net_key(uint16_t net_idx);
 
-#endif /* #if CONFIG_BT_MESH_PROVISIONER */
+#endif /* #if CONFIG_BLE_MESH_PROVISIONER */
 
 /**
  * @brief         This function is called to get fast provisioning application key.
@@ -269,6 +267,4 @@ const uint8_t *esp_ble_mesh_provisioner_get_local_net_key(uint16_t net_idx);
  */
 const uint8_t *esp_ble_mesh_get_fast_prov_app_key(uint16_t net_idx, uint16_t app_idx);
 
-#endif /* #if CONFIG_BT_MESH */
 #endif /* _ESP_BLE_MESH_NETWORKING_API_H_ */
-

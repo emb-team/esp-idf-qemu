@@ -17,8 +17,4 @@
 
 #include "esp_ble_mesh_defs.h"
 
-#if CONFIG_BT_MESH
-
-#endif /* #if CONFIG_BT_MESH */
 #endif /* _ESP_BLE_MESH_LOW_POWER_API_H_ */
-

@@ -24,6 +24,10 @@
 
 #include "ble_mesh_console_decl.h"
 
+#if CONFIG_IDF_CMAKE
+#define CONFIG_ESPTOOLPY_PORT "Which is choosen by Users for CMake"
+#endif
+
 static void register_free();
 static void register_restart();
 static void register_make();

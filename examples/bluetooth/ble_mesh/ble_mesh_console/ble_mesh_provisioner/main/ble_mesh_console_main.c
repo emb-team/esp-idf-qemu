@@ -156,13 +156,13 @@ void app_main(void)
     register_bluetooth();
     ble_mesh_register_mesh_node();
     ble_mesh_register_mesh_test_performance_client();
-#if (CONFIG_BT_MESH_GENERIC_ONOFF_CLI)
+#if (CONFIG_BLE_MESH_GENERIC_ONOFF_CLI)
     ble_mesh_register_gen_onoff_client();
 #endif
-#if (CONFIG_BT_MESH_PROVISIONER)
+#if (CONFIG_BLE_MESH_PROVISIONER)
     ble_mesh_register_mesh_provisioner();
 #endif
-#if (CONFIG_BT_MESH_CFG_CLI)
+#if (CONFIG_BLE_MESH_CFG_CLI)
     ble_mesh_register_configuration_client_model();
 #endif
 

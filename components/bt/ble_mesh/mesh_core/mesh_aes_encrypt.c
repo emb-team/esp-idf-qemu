@@ -34,8 +34,6 @@
 #include "mesh_util.h"
 #include "sdkconfig.h"
 
-#if CONFIG_BT_MESH
-
 /* max number of calls until change the key (2^48).*/
 const static uint64_t MAX_CALLS = ((uint64_t)1 << 48);
 
@@ -67,7 +65,6 @@ const static uint64_t MAX_CALLS = ((uint64_t)1 << 48);
  */
 const unsigned char gf_wrap = 0x87;
 
-
 static const uint8_t sbox[256] = {
     0x63, 0x7c, 0x77, 0x7b, 0xf2, 0x6b, 0x6f, 0xc5, 0x30, 0x01, 0x67, 0x2b,
     0xfe, 0xd7, 0xab, 0x76, 0xca, 0x82, 0xc9, 0x7d, 0xfa, 0x59, 0x47, 0xf0,
@@ -98,8 +95,8 @@ static inline unsigned int rotword(unsigned int a)
     return (((a) >> 24) | ((a) << 8));
 }
 
-#define subbyte(a, o)(sbox[((a) >> (o))&0xff] << (o))
-#define subword(a)(subbyte(a, 24)|subbyte(a, 16)|subbyte(a, 8)|subbyte(a, 0))
+#define subbyte(a, o)   (sbox[((a) >> (o))&0xff] << (o))
+#define subword(a)      (subbyte(a, 24)|subbyte(a, 16)|subbyte(a, 8)|subbyte(a, 0))
 
 int tc_aes128_set_encrypt_key(TCAesKeySched_t s, const uint8_t *k)
 {
@@ -410,6 +407,3 @@ int tc_cmac_erase(TCCmacState_t s)
 
     return TC_CRYPTO_SUCCESS;
 }
-
-#endif /* #if CONFIG_BT_MESH */
-

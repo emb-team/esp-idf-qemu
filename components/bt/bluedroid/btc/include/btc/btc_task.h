@@ -63,7 +63,7 @@ typedef enum {
     BTC_PID_HF_CLIENT,
 #endif /* BTC_HF_CLIENT_INCLUDED */
 #endif  /* CONFIG_CLASSIC_BT_ENABLED */
-#if CONFIG_BT_MESH
+#if CONFIG_BLE_MESH
     BTC_PID_PROV,
     BTC_PID_MODEL,
     BTC_PID_HEALTH_CLIENT,
@@ -74,7 +74,7 @@ typedef enum {
     BTC_PID_LIGHT_CLIENT,
     BTC_PID_SENSOR_CLIENT,
     BTC_PID_TIME_SCENE_CLIENT,
-#endif /* #if CONFIG_BT_MESH */
+#endif /* #if CONFIG_BLE_MESH */
     BTC_PID_NUM,
 } btc_pid_t; //btc profile id
 

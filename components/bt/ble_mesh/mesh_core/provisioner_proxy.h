@@ -17,10 +17,10 @@
 
 #include "mesh_buf.h"
 
-#define BT_MESH_PROXY_NET_PDU   0x00
-#define BT_MESH_PROXY_BEACON    0x01
-#define BT_MESH_PROXY_CONFIG    0x02
-#define BT_MESH_PROXY_PROV      0x03
+#define BLE_MESH_PROXY_NET_PDU   0x00
+#define BLE_MESH_PROXY_BEACON    0x01
+#define BLE_MESH_PROXY_CONFIG    0x02
+#define BLE_MESH_PROXY_PROV      0x03
 
 /**
  * @brief This function is called to send proxy protocol messages.
@@ -31,7 +31,7 @@
  *
  * @return Zero-success, other-fail
  */
-int provisioner_proxy_send(struct bt_conn *conn, u8_t type, struct net_buf_simple *msg);
+int provisioner_proxy_send(struct bt_mesh_conn *conn, u8_t type, struct net_buf_simple *msg);
 
 /**
  * @brief This function is called to parse received node identity and net

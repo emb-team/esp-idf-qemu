@@ -9,33 +9,34 @@
 
 #ifndef _NET_H_
 #define _NET_H_
+
 #include "mesh_util.h"
 #include "mesh_kernel.h"
 #include "mesh_access.h"
 
-#define BT_MESH_NET_FLAG_KR       BIT(0)
-#define BT_MESH_NET_FLAG_IVU      BIT(1)
+#define BLE_MESH_NET_FLAG_KR       BIT(0)
+#define BLE_MESH_NET_FLAG_IVU      BIT(1)
 
-#define BT_MESH_KR_NORMAL         0x00
-#define BT_MESH_KR_PHASE_1        0x01
-#define BT_MESH_KR_PHASE_2        0x02
-#define BT_MESH_KR_PHASE_3        0x03
+#define BLE_MESH_KR_NORMAL         0x00
+#define BLE_MESH_KR_PHASE_1        0x01
+#define BLE_MESH_KR_PHASE_2        0x02
+#define BLE_MESH_KR_PHASE_3        0x03
 
-#define BT_MESH_IV_UPDATE(flags)   ((flags >> 1) & 0x01)
-#define BT_MESH_KEY_REFRESH(flags) (flags & 0x01)
+#define BLE_MESH_IV_UPDATE(flags)   ((flags >> 1) & 0x01)
+#define BLE_MESH_KEY_REFRESH(flags) (flags & 0x01)
 
 /* Special time-stamp to indicate that we don't know when the last IV
  * Update happened.
  */
-#define BT_MESH_NET_IVU_UNKNOWN -1
+#define BLE_MESH_NET_IVU_UNKNOWN -1
 
-#if defined(CONFIG_BT_MESH_IV_UPDATE_TEST)
+#if defined(CONFIG_BLE_MESH_IV_UPDATE_TEST)
 /* Small test timeout for IV Update Procedure testing */
-#define BT_MESH_NET_IVU_TIMEOUT  K_SECONDS(120)
+#define BLE_MESH_NET_IVU_TIMEOUT  K_SECONDS(120)
 #else
 /* Maximum time to stay in IV Update mode (96 < time < 144) */
-#define BT_MESH_NET_IVU_TIMEOUT  K_HOURS(120)
-#endif /* CONFIG_BT_MESH_IV_UPDATE_TEST */
+#define BLE_MESH_NET_IVU_TIMEOUT  K_HOURS(120)
+#endif /* CONFIG_BLE_MESH_IV_UPDATE_TEST */
 
 struct bt_mesh_app_key {
     u16_t net_idx;
@@ -73,7 +74,7 @@ struct bt_mesh_subnet {
         u8_t nid;           /* NID */
         u8_t enc[16];       /* EncKey */
         u8_t net_id[8];     /* Network ID */
-#if defined(CONFIG_BT_MESH_GATT_PROXY)
+#if defined(CONFIG_BLE_MESH_GATT_PROXY)
         u8_t identity[16];  /* IdentityKey */
 #endif
         u8_t privacy[16];   /* PrivacyKey */
@@ -84,15 +85,15 @@ struct bt_mesh_subnet {
 struct bt_mesh_rpl {
     u16_t src;
     bool  old_iv;
-#if defined(CONFIG_BT_MESH_SETTINGS)
+#if defined(CONFIG_BLE_MESH_SETTINGS)
     bool  store;
 #endif
     u32_t seq;
 };
 
-#if defined(CONFIG_BT_MESH_FRIEND)
-#define FRIEND_SEG_RX CONFIG_BT_MESH_FRIEND_SEG_RX
-#define FRIEND_SUB_LIST_SIZE CONFIG_BT_MESH_FRIEND_SUB_LIST_SIZE
+#if defined(CONFIG_BLE_MESH_FRIEND)
+#define FRIEND_SEG_RX CONFIG_BLE_MESH_FRIEND_SEG_RX
+#define FRIEND_SUB_LIST_SIZE CONFIG_BLE_MESH_FRIEND_SUB_LIST_SIZE
 #else
 #define FRIEND_SEG_RX 0
 #define FRIEND_SUB_LIST_SIZE 0
@@ -137,8 +138,8 @@ struct bt_mesh_friend {
     } clear;
 };
 
-#if defined(CONFIG_BT_MESH_LOW_POWER)
-#define LPN_GROUPS CONFIG_BT_MESH_LOW_POWER
+#if defined(CONFIG_BLE_MESH_LOW_POWER)
+#define LPN_GROUPS CONFIG_BLE_MESH_LOW_POWER
 #else
 #define LPN_GROUPS 0
 #endif
@@ -146,16 +147,16 @@ struct bt_mesh_friend {
 /* Low Power Node state */
 struct bt_mesh_lpn {
     enum __packed {
-        BT_MESH_LPN_DISABLED,     /* LPN feature is disabled */
-        BT_MESH_LPN_CLEAR,        /* Clear in progress */
-        BT_MESH_LPN_TIMER,        /* Waiting for auto timer expiry */
-        BT_MESH_LPN_ENABLED,      /* LPN enabled, but no Friend */
-        BT_MESH_LPN_REQ_WAIT,     /* Wait before scanning for offers */
-        BT_MESH_LPN_WAIT_OFFER,   /* Friend Req sent */
-        BT_MESH_LPN_ESTABLISHED,  /* Friendship established */
-        BT_MESH_LPN_RECV_DELAY,   /* Poll sent, waiting ReceiveDelay */
-        BT_MESH_LPN_WAIT_UPDATE,  /* Waiting for Update or message */
-        BT_MESH_LPN_OFFER_RECV,   /* Friend offer received */
+        BLE_MESH_LPN_DISABLED,     /* LPN feature is disabled */
+        BLE_MESH_LPN_CLEAR,        /* Clear in progress */
+        BLE_MESH_LPN_TIMER,        /* Waiting for auto timer expiry */
+        BLE_MESH_LPN_ENABLED,      /* LPN enabled, but no Friend */
+        BLE_MESH_LPN_REQ_WAIT,     /* Wait before scanning for offers */
+        BLE_MESH_LPN_WAIT_OFFER,   /* Friend Req sent */
+        BLE_MESH_LPN_ESTABLISHED,  /* Friendship established */
+        BLE_MESH_LPN_RECV_DELAY,   /* Poll sent, waiting ReceiveDelay */
+        BLE_MESH_LPN_WAIT_UPDATE,  /* Waiting for Update or message */
+        BLE_MESH_LPN_OFFER_RECV,   /* Friend offer received */
     } state;
 
     /* Transaction Number (used for subscription list) */
@@ -201,24 +202,24 @@ struct bt_mesh_lpn {
     u16_t groups[LPN_GROUPS];
 
     /* Bit fields for tracking which groups the Friend knows about */
-    ATOMIC_DEFINE(added, LPN_GROUPS);
-    ATOMIC_DEFINE(pending, LPN_GROUPS);
-    ATOMIC_DEFINE(to_remove, LPN_GROUPS);
+    BLE_MESH_ATOMIC_DEFINE(added, LPN_GROUPS);
+    BLE_MESH_ATOMIC_DEFINE(pending, LPN_GROUPS);
+    BLE_MESH_ATOMIC_DEFINE(to_remove, LPN_GROUPS);
 };
 
 /* bt_mesh_net.flags, mainly used for pending storage actions */
 enum {
-    BT_MESH_RPL_PENDING,
-    BT_MESH_KEYS_PENDING,
-    BT_MESH_NET_PENDING,
-    BT_MESH_IV_PENDING,
-    BT_MESH_SEQ_PENDING,
-    BT_MESH_HB_PUB_PENDING,
-    BT_MESH_CFG_PENDING,
-    BT_MESH_MOD_PENDING,
+    BLE_MESH_RPL_PENDING,
+    BLE_MESH_KEYS_PENDING,
+    BLE_MESH_NET_PENDING,
+    BLE_MESH_IV_PENDING,
+    BLE_MESH_SEQ_PENDING,
+    BLE_MESH_HB_PUB_PENDING,
+    BLE_MESH_CFG_PENDING,
+    BLE_MESH_MOD_PENDING,
 
     /* Don't touch - intentionally last */
-    BT_MESH_FLAG_COUNT,
+    BLE_MESH_FLAG_COUNT,
 };
 
 struct bt_mesh_net {
@@ -232,18 +233,18 @@ struct bt_mesh_net {
 
     s64_t last_update;       /* Time since last IV Update change */
 
-    ATOMIC_DEFINE(flags, BT_MESH_FLAG_COUNT);
+    BLE_MESH_ATOMIC_DEFINE(flags, BLE_MESH_FLAG_COUNT);
 
     /* Local network interface */
     struct k_work local_work;
     sys_slist_t local_queue;
 
-#if defined(CONFIG_BT_MESH_FRIEND)
+#if defined(CONFIG_BLE_MESH_FRIEND)
     /* Friend state, unique for each LPN that we're Friends for */
-    struct bt_mesh_friend frnd[CONFIG_BT_MESH_FRIEND_LPN_COUNT];
+    struct bt_mesh_friend frnd[CONFIG_BLE_MESH_FRIEND_LPN_COUNT];
 #endif
 
-#if defined(CONFIG_BT_MESH_LOW_POWER)
+#if defined(CONFIG_BLE_MESH_LOW_POWER)
     struct bt_mesh_lpn lpn;  /* Low Power Node state */
 #endif
 
@@ -252,22 +253,22 @@ struct bt_mesh_net {
 
     u8_t dev_key[16];
 
-    struct bt_mesh_app_key app_keys[CONFIG_BT_MESH_APP_KEY_COUNT];
+    struct bt_mesh_app_key app_keys[CONFIG_BLE_MESH_APP_KEY_COUNT];
 
-    struct bt_mesh_subnet sub[CONFIG_BT_MESH_SUBNET_COUNT];
+    struct bt_mesh_subnet sub[CONFIG_BLE_MESH_SUBNET_COUNT];
 
-    struct bt_mesh_rpl rpl[CONFIG_BT_MESH_CRPL];
+    struct bt_mesh_rpl rpl[CONFIG_BLE_MESH_CRPL];
 
-#if CONFIG_BT_MESH_PROVISIONER
+#if CONFIG_BLE_MESH_PROVISIONER
     /* Provisioner and node share arguments from 'iv_index' to 'local_queue' + 'ivu_complete' */
 
     /* Application keys stored by provisioner */
-    struct bt_mesh_app_key *p_app_keys[CONFIG_BT_MESH_PROVISIONER_APP_KEY_COUNT];
+    struct bt_mesh_app_key *p_app_keys[CONFIG_BLE_MESH_PROVISIONER_APP_KEY_COUNT];
     /* Next app_idx can be assigned */
     u16_t p_app_idx_next;
 
     /* Network keys stored by provisioner */
-    struct bt_mesh_subnet *p_sub[CONFIG_BT_MESH_PROVISIONER_SUBNET_COUNT];
+    struct bt_mesh_subnet *p_sub[CONFIG_BLE_MESH_PROVISIONER_SUBNET_COUNT];
     /* Next net_idx can be assigned */
     u16_t p_net_idx_next;
 #endif
@@ -275,10 +276,10 @@ struct bt_mesh_net {
 
 /* Network interface */
 enum bt_mesh_net_if {
-    BT_MESH_NET_IF_ADV,
-    BT_MESH_NET_IF_LOCAL,
-    BT_MESH_NET_IF_PROXY,
-    BT_MESH_NET_IF_PROXY_CFG,
+    BLE_MESH_NET_IF_ADV,
+    BLE_MESH_NET_IF_LOCAL,
+    BLE_MESH_NET_IF_PROXY,
+    BLE_MESH_NET_IF_PROXY_CFG,
 };
 
 /* Decoding context for Network/Transport data */
@@ -310,10 +311,10 @@ struct bt_mesh_net_tx {
 
 extern struct bt_mesh_net bt_mesh;
 
-#define BT_MESH_NET_IVI_TX (bt_mesh.iv_index - bt_mesh.iv_update)
-#define BT_MESH_NET_IVI_RX(rx) (bt_mesh.iv_index - (rx)->old_iv)
+#define BLE_MESH_NET_IVI_TX (bt_mesh.iv_index - bt_mesh.iv_update)
+#define BLE_MESH_NET_IVI_RX(rx) (bt_mesh.iv_index - (rx)->old_iv)
 
-#define BT_MESH_NET_HDR_LEN 9
+#define BLE_MESH_NET_HDR_LEN 9
 
 int bt_mesh_net_keys_create(struct bt_mesh_subnet_keys *keys,
                             const u8_t key[16]);
@@ -388,4 +389,4 @@ struct friend_cred *friend_cred_create(struct bt_mesh_subnet *sub, u16_t addr,
 void friend_cred_clear(struct friend_cred *cred);
 int friend_cred_del(u16_t net_idx, u16_t addr);
 
-#endif /* #ifndef _NET_H_ */
+#endif /* _NET_H_ */

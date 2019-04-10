@@ -15,7 +15,7 @@
 #include "esp_timer.h"
 #include "ble_mesh_adapter.h"
 
-#if (CONFIG_BT_MESH_GENERIC_ONOFF_CLI)
+#if (CONFIG_BLE_MESH_GENERIC_ONOFF_CLI)
 typedef struct {
     struct arg_str *action_type;
     struct arg_int *op_en;

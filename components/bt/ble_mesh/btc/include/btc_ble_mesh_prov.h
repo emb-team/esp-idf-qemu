@@ -26,12 +26,11 @@
 #include "mesh_access.h"
 #include "mesh_buf.h"
 #include "mesh_main.h"
+#include "provisioner_prov.h"
 #include "esp_ble_mesh_defs.h"
 
-#if CONFIG_BT_MESH
-
 typedef enum {
-    BTC_BLE_MESH_ACT_APP_REGISTER = 0,
+    BTC_BLE_MESH_ACT_MESH_INIT = 0,
     BTC_BLE_MESH_ACT_PROV_ENABLE,
     BTC_BLE_MESH_ACT_PROV_DISABLE,
     BTC_BLE_MESH_ACT_NODE_RESET,
@@ -42,7 +41,7 @@ typedef enum {
     BTC_BLE_MESH_ACT_PROXY_IDENTITY_ENABLE,
     BTC_BLE_MESH_ACT_PROXY_GATT_ENABLE,
     BTC_BLE_MESH_ACT_PROXY_GATT_DISABLE,
-#if (CONFIG_BT_MESH_PROVISIONER)
+#if (CONFIG_BLE_MESH_PROVISIONER)
     BTC_BLE_MESH_ACT_PROVISIONER_READ_OOB_PUB_KEY,
     BTC_BLE_MESH_ACT_PROVISIONER_INPUT_STR,
     BTC_BLE_MESH_ACT_PROVISIONER_INPUT_NUM,
@@ -56,7 +55,7 @@ typedef enum {
     BTC_BLE_MESH_ACT_PROVISIONER_SET_LOCAL_APP_KEY,
     BTC_BLE_MESH_ACT_PROVISIONER_BIND_LOCAL_MOD_APP,
     BTC_BLE_MESH_ACT_PROVISIONER_ADD_LOCAL_NET_KEY,
-#endif /* CONFIG_BT_MESH_PROVISIONER */
+#endif /* CONFIG_BLE_MESH_PROVISIONER */
     BTC_BLE_MESH_ACT_SET_FAST_PROV_INFO,
     BTC_BLE_MESH_ACT_SET_FAST_PROV_ACTION,
 } btc_ble_mesh_prov_act_t;
@@ -68,33 +67,32 @@ typedef enum {
 } btc_ble_mesh_model_act_t;
 
 typedef union {
-    struct ble_mesh_reg_args {
+    struct ble_mesh_init_args {
         esp_ble_mesh_prov_t *prov;
         esp_ble_mesh_comp_t *comp;
-        xSemaphoreHandle semaphore;
-        uint8_t mesh_if;
-    } mesh_reg;
-    struct ble_mesh_prov_enable_args {
+        SemaphoreHandle_t semaphore;
+    } mesh_init;
+    struct ble_mesh_node_prov_enable_args {
         esp_ble_mesh_prov_bearer_t bearers;
-    } mesh_prov_enable;
-    struct ble_mesh_prov_disable_args {
+    } node_prov_enable;
+    struct ble_mesh_node_prov_disable_args {
         esp_ble_mesh_prov_bearer_t bearers;
-    } mesh_prov_disable;
+    } node_prov_disable;
     struct ble_mesh_set_oob_pub_key_args {
         uint8_t pub_key_x[32];
         uint8_t pub_key_y[32];
         uint8_t private_key[32];
     } set_oob_pub_key;
-    struct ble_mesh_input_num_args {
+    struct ble_mesh_node_input_num_args {
         uint32_t number;
-    } input_num;
-    struct ble_mesh_input_str_args {
+    } input_number;
+    struct ble_mesh_node_input_str_args {
         char string[8];
-    } input_str;
+    } input_string;
     struct ble_mesh_set_device_name_args {
         char name[ESP_BLE_MESH_DEVICE_NAME_MAX_LEN];
     } set_device_name;
-#if (CONFIG_BT_MESH_PROVISIONER)
+#if (CONFIG_BLE_MESH_PROVISIONER)
     struct ble_mesh_provisioner_read_oob_pub_key_args {
         uint8_t link_idx;
         uint8_t pub_key_x[32];
@@ -149,8 +147,8 @@ typedef union {
         uint8_t net_key[16];
         uint16_t net_idx;
     } add_local_net_key;
-#endif /* CONFIG_BT_MESH_PROVISIONER */
-#if (CONFIG_BT_MESH_FAST_PROV)
+#endif /* CONFIG_BLE_MESH_PROVISIONER */
+#if (CONFIG_BLE_MESH_FAST_PROV)
     struct ble_mesh_set_fast_prov_info_args {
         uint16_t unicast_min;
         uint16_t unicast_max;
@@ -164,7 +162,7 @@ typedef union {
     struct ble_mesh_set_fast_prov_action_args {
         uint8_t action;
     } set_fast_prov_action;
-#endif /* CONFIG_BT_MESH_FAST_PROV */
+#endif /* CONFIG_BLE_MESH_FAST_PROV */
 } btc_ble_mesh_prov_args_t;
 
 typedef union {
@@ -216,5 +214,3 @@ void btc_mesh_prov_call_handler(btc_msg_t *msg);
 void btc_mesh_prov_cb_handler(btc_msg_t *msg);
 
 #endif /* _BTC_BLE_MESH_PROV_H_ */
-#endif /* #if CONFIG_BT_MESH */
-

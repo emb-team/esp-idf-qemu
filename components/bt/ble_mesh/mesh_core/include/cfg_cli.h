@@ -8,12 +8,12 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-#ifndef __BT_MESH_CFG_CLI_H
-#define __BT_MESH_CFG_CLI_H
+#ifndef _BLE_MESH_CFG_CLI_H_
+#define _BLE_MESH_CFG_CLI_H_
 
 #include "mesh_access.h"
 #include "mesh_kernel.h"
-#include "bt_mesh_client_common.h"
+#include "model_common.h"
 
 /**
  * @brief Bluetooth Mesh
@@ -28,9 +28,9 @@ typedef bt_mesh_internal_data_t config_internal_data_t;
 
 extern const struct bt_mesh_model_op bt_mesh_cfg_cli_op[];
 
-#define BT_MESH_MODEL_CFG_CLI(cli_data)                                      \
-        BT_MESH_MODEL(BT_MESH_MODEL_ID_CFG_CLI,                      \
-                  bt_mesh_cfg_cli_op, NULL, cli_data)
+#define BLE_MESH_MODEL_CFG_CLI(cli_data)            \
+        BLE_MESH_MODEL(BLE_MESH_MODEL_ID_CFG_CLI,   \
+            bt_mesh_cfg_cli_op, NULL, cli_data)
 
 int bt_mesh_cfg_comp_data_get(struct bt_mesh_msg_ctx *ctx, u8_t page);
 
@@ -64,12 +64,12 @@ int bt_mesh_cfg_mod_app_bind(struct bt_mesh_msg_ctx *ctx, u16_t elem_addr,
                              u16_t mod_app_idx, u16_t mod_id, u16_t cid);
 
 struct bt_mesh_cfg_mod_pub {
-    u16_t  addr;
-    u16_t  app_idx;
-    bool   cred_flag;
-    u8_t   ttl;
-    u8_t   period;
-    u8_t   transmit;
+    u16_t addr;
+    u16_t app_idx;
+    bool  cred_flag;
+    u8_t  ttl;
+    u8_t  period;
+    u8_t  transmit;
 };
 
 int bt_mesh_cfg_mod_pub_get(struct bt_mesh_msg_ctx *ctx, u16_t elem_addr,
@@ -294,4 +294,4 @@ int bt_mesh_cfg_net_transmit_set(struct bt_mesh_msg_ctx *ctx, u8_t transmit);
  * @}
  */
 
-#endif /* __BT_MESH_CFG_CLI_H */
+#endif /* __BLE_MESH_CFG_CLI_H */

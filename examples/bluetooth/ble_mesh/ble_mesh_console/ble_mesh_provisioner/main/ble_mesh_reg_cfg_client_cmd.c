@@ -15,7 +15,7 @@
 #include "esp_ble_mesh_networking_api.h"
 #include "ble_mesh_adapter.h"
 
-#if (CONFIG_BT_MESH_CFG_CLI)
+#if (CONFIG_BLE_MESH_CFG_CLI)
 typedef struct {
     struct arg_str *action_type;
     struct arg_str *set_state;

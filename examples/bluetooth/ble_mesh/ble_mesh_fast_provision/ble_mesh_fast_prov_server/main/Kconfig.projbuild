@@ -1,15 +1,22 @@
-menu "Example 'BLE Mesh' Config"
+menu "Example Configuration"
 
-config ESP_WROOM_32_BOARD
-    bool "If used the ESP32-DevKitC board this macro set to true, if used the ESP-WROVER-KIT board this macro should set to false"
-    default n
-    help
-        this marco only affect the LED pin set with the different board.
+    choice ESP32_BOARD
+        prompt "Board selection for BLE Mesh"
+        default ESP_WROOM_32_BOARD
+        help
+            Select this option to choose the board for BLE Mesh. The default is ESP32-WROOM-32
 
-config HCI_5_0_VERSION
-    bool "If you need to send 20ms non-connectable advertising packets but BLE controller is not HCI 5.0, this macro set to true."
-    default y
-    help
-         it is a temporal solution, need further modification.
+        config ESP_WROOM_32_BOARD
+            bool "ESP32-WROOM-32"
+
+        config ESP_WROVER_BOARD
+            bool "ESP32-WROVER"
+    endchoice
+
+    config HCI_5_0_VERSION
+        bool "Support sending 20ms non-connectable advertising packets"
+        default y
+        help
+            It is a temporary solution and needs further modifications.
 
 endmenu

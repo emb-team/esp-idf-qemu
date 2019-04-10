@@ -7,8 +7,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef _BLE_MESH_TEST_H
-#define _BLE_MESH_TEST_H
+#ifndef _BLE_MESH_TEST_H_
+#define _BLE_MESH_TEST_H_
 
 #include <stdbool.h>
 #include <errno.h>
@@ -17,7 +17,7 @@
 #include "mesh_buf.h"
 #include "sdkconfig.h"
 
-#if defined(CONFIG_BT_MESH_SELF_TEST)
+#if defined(CONFIG_BLE_MESH_SELF_TEST)
 int bt_mesh_test(void);
 #else
 static inline int bt_mesh_test(void)
@@ -40,4 +40,4 @@ struct bt_mesh_device_network_info {
 
 int bt_mesh_device_auto_enter_network(struct bt_mesh_device_network_info *info);
 
-#endif /* _BLE_MESH_TEST_H */
+#endif /* _BLE_MESH_TEST_H_ */

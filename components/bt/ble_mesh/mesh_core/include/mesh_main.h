@@ -8,12 +8,11 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-#ifndef __BT_MESH_MAIN_H
-#define __BT_MESH_MAIN_H
+#ifndef _BLE_MESH_MAIN_H_
+#define _BLE_MESH_MAIN_H_
 
 #include "mesh_util.h"
 #include "mesh_access.h"
-#if CONFIG_BT_MESH
 
 /**
  * @brief Bluetooth Mesh Provisioning
@@ -23,30 +22,30 @@
  */
 
 typedef enum {
-    BT_MESH_NO_OUTPUT       = 0,
-    BT_MESH_BLINK           = BIT(0),
-    BT_MESH_BEEP            = BIT(1),
-    BT_MESH_VIBRATE         = BIT(2),
-    BT_MESH_DISPLAY_NUMBER  = BIT(3),
-    BT_MESH_DISPLAY_STRING  = BIT(4),
+    BLE_MESH_NO_OUTPUT       = 0,
+    BLE_MESH_BLINK           = BIT(0),
+    BLE_MESH_BEEP            = BIT(1),
+    BLE_MESH_VIBRATE         = BIT(2),
+    BLE_MESH_DISPLAY_NUMBER  = BIT(3),
+    BLE_MESH_DISPLAY_STRING  = BIT(4),
 } bt_mesh_output_action_t;
 
 typedef enum {
-    BT_MESH_NO_INPUT      = 0,
-    BT_MESH_PUSH          = BIT(0),
-    BT_MESH_TWIST         = BIT(1),
-    BT_MESH_ENTER_NUMBER  = BIT(2),
-    BT_MESH_ENTER_STRING  = BIT(3),
+    BLE_MESH_NO_INPUT      = 0,
+    BLE_MESH_PUSH          = BIT(0),
+    BLE_MESH_TWIST         = BIT(1),
+    BLE_MESH_ENTER_NUMBER  = BIT(2),
+    BLE_MESH_ENTER_STRING  = BIT(3),
 } bt_mesh_input_action_t;
 
 typedef enum {
-    BT_MESH_PROV_ADV   = BIT(0),
-    BT_MESH_PROV_GATT  = BIT(1),
+    BLE_MESH_PROV_ADV   = BIT(0),
+    BLE_MESH_PROV_GATT  = BIT(1),
 } bt_mesh_prov_bearer_t;
 
 /** Provisioning properties & capabilities. */
 struct bt_mesh_prov {
-#if CONFIG_BT_MESH_NODE
+#if CONFIG_BLE_MESH_NODE
     /** The UUID that's used when advertising as unprovisioned */
     const u8_t *uuid;
 
@@ -154,9 +153,9 @@ struct bt_mesh_prov {
      *  unprovisioned advertising on one or more provisioning bearers.
      */
     void        (*reset)(void);
-#endif /* CONFIG_BT_MESH_NODE */
+#endif /* CONFIG_BLE_MESH_NODE */
 
-#if CONFIG_BT_MESH_PROVISIONER
+#if CONFIG_BLE_MESH_PROVISIONER
     /* Provisioner device uuid */
     const u8_t *prov_uuid;
 
@@ -274,13 +273,13 @@ struct bt_mesh_prov {
                           u16_t unicast_addr, u8_t element_num,
                           u16_t netkey_idx);
 
-#endif /* CONFIG_BT_MESH_PROVISIONER */
+#endif /* CONFIG_BLE_MESH_PROVISIONER */
 };
 
 /** @brief Provide provisioning input OOB string.
  *
  *  This is intended to be called after the bt_mesh_prov input callback
- *  has been called with BT_MESH_ENTER_STRING as the action.
+ *  has been called with BLE_MESH_ENTER_STRING as the action.
  *
  *  @param str String.
  *
@@ -291,7 +290,7 @@ int bt_mesh_input_string(const char *str);
 /** @brief Provide provisioning input OOB number.
  *
  *  This is intended to be called after the bt_mesh_prov input callback
- *  has been called with BT_MESH_ENTER_NUMBER as the action.
+ *  has been called with BLE_MESH_ENTER_NUMBER as the action.
  *
  *  @param num Number.
  *
@@ -327,7 +326,7 @@ bool bt_mesh_is_provisioner_en(void);
 
 /* The following API is for fast provisioning */
 
-#if CONFIG_BT_MESH_FAST_PROV
+#if CONFIG_BLE_MESH_FAST_PROV
 
 /** @brief Change the device action
  *
@@ -338,14 +337,14 @@ bool bt_mesh_is_provisioner_en(void);
  */
 u8_t bt_mesh_set_fast_prov_action(u8_t action);
 
-#endif /* CONFIG_BT_MESH_FAST_PROV */
+#endif /* CONFIG_BLE_MESH_FAST_PROV */
 
-#if CONFIG_BT_MESH_PROVISIONER
+#if CONFIG_BLE_MESH_PROVISIONER
 
 /** @brief Provide provisioning input OOB string.
  *
  *  This is intended to be called after the bt_mesh_prov input callback
- *  has been called with BT_MESH_ENTER_STRING as the action.
+ *  has been called with BLE_MESH_ENTER_STRING as the action.
  *
  *  @param str String.
  *
@@ -356,7 +355,7 @@ int bt_mesh_prov_input_string(const char *str);
 /** @brief Provide provisioning input OOB number.
  *
  *  This is intended to be called after the bt_mesh_prov input callback
- *  has been called with BT_MESH_ENTER_NUMBER as the action.
+ *  has been called with BLE_MESH_ENTER_NUMBER as the action.
  *
  *  @param num Number.
  *
@@ -384,7 +383,7 @@ int bt_mesh_provisioner_enable(bt_mesh_prov_bearer_t bearers);
  */
 int bt_mesh_provisioner_disable(bt_mesh_prov_bearer_t bearers);
 
-#endif /* CONFIG_BT_MESH_PROVISIONER */
+#endif /* CONFIG_BLE_MESH_PROVISIONER */
 
 /**
  * @}
@@ -398,36 +397,36 @@ int bt_mesh_provisioner_disable(bt_mesh_prov_bearer_t bearers);
  */
 
 /* Primary Network Key index */
-#define BT_MESH_NET_PRIMARY                 0x000
+#define BLE_MESH_NET_PRIMARY                 0x000
 
-#define BT_MESH_RELAY_DISABLED              0x00
-#define BT_MESH_RELAY_ENABLED               0x01
-#define BT_MESH_RELAY_NOT_SUPPORTED         0x02
+#define BLE_MESH_RELAY_DISABLED              0x00
+#define BLE_MESH_RELAY_ENABLED               0x01
+#define BLE_MESH_RELAY_NOT_SUPPORTED         0x02
 
-#define BT_MESH_BEACON_DISABLED             0x00
-#define BT_MESH_BEACON_ENABLED              0x01
+#define BLE_MESH_BEACON_DISABLED             0x00
+#define BLE_MESH_BEACON_ENABLED              0x01
 
-#define BT_MESH_GATT_PROXY_DISABLED         0x00
-#define BT_MESH_GATT_PROXY_ENABLED          0x01
-#define BT_MESH_GATT_PROXY_NOT_SUPPORTED    0x02
+#define BLE_MESH_GATT_PROXY_DISABLED         0x00
+#define BLE_MESH_GATT_PROXY_ENABLED          0x01
+#define BLE_MESH_GATT_PROXY_NOT_SUPPORTED    0x02
 
-#define BT_MESH_FRIEND_DISABLED             0x00
-#define BT_MESH_FRIEND_ENABLED              0x01
-#define BT_MESH_FRIEND_NOT_SUPPORTED        0x02
+#define BLE_MESH_FRIEND_DISABLED             0x00
+#define BLE_MESH_FRIEND_ENABLED              0x01
+#define BLE_MESH_FRIEND_NOT_SUPPORTED        0x02
 
-#define BT_MESH_NODE_IDENTITY_STOPPED       0x00
-#define BT_MESH_NODE_IDENTITY_RUNNING       0x01
-#define BT_MESH_NODE_IDENTITY_NOT_SUPPORTED 0x02
+#define BLE_MESH_NODE_IDENTITY_STOPPED       0x00
+#define BLE_MESH_NODE_IDENTITY_RUNNING       0x01
+#define BLE_MESH_NODE_IDENTITY_NOT_SUPPORTED 0x02
 
 /* Features */
-#define BT_MESH_FEAT_RELAY                  BIT(0)
-#define BT_MESH_FEAT_PROXY                  BIT(1)
-#define BT_MESH_FEAT_FRIEND                 BIT(2)
-#define BT_MESH_FEAT_LOW_POWER              BIT(3)
-#define BT_MESH_FEAT_SUPPORTED              (BT_MESH_FEAT_RELAY |   \
-                         BT_MESH_FEAT_PROXY |   \
-                         BT_MESH_FEAT_FRIEND |  \
-                         BT_MESH_FEAT_LOW_POWER)
+#define BLE_MESH_FEAT_RELAY                  BIT(0)
+#define BLE_MESH_FEAT_PROXY                  BIT(1)
+#define BLE_MESH_FEAT_FRIEND                 BIT(2)
+#define BLE_MESH_FEAT_LOW_POWER              BIT(3)
+#define BLE_MESH_FEAT_SUPPORTED              (BLE_MESH_FEAT_RELAY |     \
+                                              BLE_MESH_FEAT_PROXY |     \
+                                              BLE_MESH_FEAT_FRIEND |    \
+                                              BLE_MESH_FEAT_LOW_POWER)
 
 /** @brief Initialize Mesh support
  *
@@ -530,5 +529,4 @@ void bt_mesh_lpn_set_cb(void (*cb)(u16_t friend_addr, bool established));
  * @}
  */
 
-#endif /* __BT_MESH_MAIN_H */
-#endif /* #if CONFIG_BT_MESH */
+#endif /* _BLE_MESH_MAIN_H_ */

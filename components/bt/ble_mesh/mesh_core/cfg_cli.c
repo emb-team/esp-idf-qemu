@@ -10,22 +10,21 @@
 #include <string.h>
 #include <errno.h>
 #include <stdbool.h>
+
+#include "osi/allocator.h"
+#include "sdkconfig.h"
+#define BT_DBG_ENABLED IS_ENABLED(CONFIG_BLE_MESH_DEBUG_MODEL)
+
 #include "mesh_types.h"
 #include "mesh_util.h"
 #include "mesh_kernel.h"
-
-#include "mesh.h"
-#include "sdkconfig.h"
-#include "osi/allocator.h"
-
-#if CONFIG_BT_MESH
-
-#define BT_DBG_ENABLED IS_ENABLED(CONFIG_BT_MESH_DEBUG_MODEL)
 #include "mesh_trace.h"
 #include "cfg_cli.h"
+
+#include "mesh.h"
 #include "foundation.h"
-#include "common.h"
-#include "btc_ble_mesh_config_client.h"
+#include "mesh_common.h"
+#include "btc_ble_mesh_config_model.h"
 
 #define CID_NVAL 0xffff
 
@@ -85,27 +84,27 @@ static const bt_mesh_client_op_pair_t cfg_op_pair[] = {
 
 static void timeout_handler(struct k_work *work)
 {
-    bt_mesh_config_client_t *client   = NULL;
-    config_internal_data_t  *internal = NULL;
-    bt_mesh_client_node_t   *node     = NULL;
+    config_internal_data_t *internal = NULL;
+    bt_mesh_config_client_t *client = NULL;
+    bt_mesh_client_node_t *node = NULL;
 
     BT_WARN("Receive configuration status message timeout");
 
     node = CONTAINER_OF(work, bt_mesh_client_node_t, timer.work);
     if (!node || !node->ctx.model) {
-        BT_ERR("%s: node parameter is NULL", __func__);
+        BT_ERR("%s, Invalid parameter", __func__);
         return;
     }
 
     client = (bt_mesh_config_client_t *)node->ctx.model->user_data;
     if (!client) {
-        BT_ERR("%s: model user_data is NULL", __func__);
+        BT_ERR("%s, Config Client user_data is NULL", __func__);
         return;
     }
 
     internal = (config_internal_data_t *)client->internal_data;
     if (!internal) {
-        BT_ERR("%s: internal_data is NULL", __func__);
+        BT_ERR("%s, Config Client internal_data is NULL", __func__);
         return;
     }
 
@@ -122,18 +121,18 @@ static void cfg_client_cancel(struct bt_mesh_model *model,
                               void *status, size_t len)
 {
     config_internal_data_t *data = NULL;
-    bt_mesh_client_node_t  *node = NULL;
+    bt_mesh_client_node_t *node = NULL;
     struct net_buf_simple buf = {0};
     u8_t evt_type = 0xFF;
 
     if (!model || !ctx) {
-        BT_ERR("%s: invalid parameter", __func__);
+        BT_ERR("%s, Invalid parameter", __func__);
         return;
     }
 
     data = (config_internal_data_t *)cli->internal_data;
     if (!data) {
-        BT_ERR("%s: config client internal_data is NULL", __func__);
+        BT_ERR("%s, Config Client internal_data is NULL", __func__);
         return;
     }
 
@@ -253,7 +252,7 @@ static void comp_data_status(struct bt_mesh_model *model,
     status.page = net_buf_simple_pull_u8(buf);
     status.comp_data = bt_mesh_alloc_buf(buf->len);
     if (!status.comp_data) {
-        BT_ERR("%s: allocate memory for comp_data fail", __func__);
+        BT_ERR("%s, Failed to allocate memory", __func__);
         return;
     }
 
@@ -504,7 +503,7 @@ static void mod_sub_list(struct bt_mesh_model *model,
 
     list.addr = bt_mesh_alloc_buf(buf->len);
     if (!list.addr) {
-        BT_ERR("%s: Failed to allocate memory", __func__);
+        BT_ERR("%s, Failed to allocate memory", __func__);
         return;
     }
     net_buf_simple_init(list.addr, 0);
@@ -525,7 +524,7 @@ static void net_key_list(struct bt_mesh_model *model,
 
     list.net_idx = bt_mesh_alloc_buf(buf->len);
     if (!list.net_idx) {
-        BT_ERR("%s: Failed to allocate memory", __func__);
+        BT_ERR("%s, Failed to allocate memory", __func__);
         return;
     }
     net_buf_simple_init(list.net_idx, 0);
@@ -548,7 +547,7 @@ static void app_key_list(struct bt_mesh_model *model,
     list.net_idx = net_buf_simple_pull_le16(buf);
     list.app_idx = bt_mesh_alloc_buf(buf->len);
     if (!list.app_idx) {
-        BT_ERR("%s: Failed to allocate memory", __func__);
+        BT_ERR("%s, Failed to allocate memory", __func__);
         return;
     }
     net_buf_simple_init(list.app_idx, 0);
@@ -595,7 +594,7 @@ static void mod_app_list(struct bt_mesh_model *model,
 
     list.app_idx = bt_mesh_alloc_buf(buf->len);
     if (!list.app_idx) {
-        BT_ERR("%s: Failed to allocate memory", __func__);
+        BT_ERR("%s, Failed to allocate memory", __func__);
         return;
     }
     net_buf_simple_init(list.app_idx, 0);
@@ -671,7 +670,7 @@ const struct bt_mesh_model_op bt_mesh_cfg_cli_op[] = {
     { OP_KRP_STATUS,             4,   kr_phase_status   },
     { OP_LPN_TIMEOUT_STATUS,     5,   lpn_pollto_status },
     { OP_NET_TRANSMIT_STATUS,    1,   net_trans_status  },
-    BT_MESH_MODEL_OP_END,
+    BLE_MESH_MODEL_OP_END,
 };
 
 int bt_mesh_cfg_comp_data_get(struct bt_mesh_msg_ctx *ctx, u8_t page)
@@ -690,7 +689,7 @@ int bt_mesh_cfg_comp_data_get(struct bt_mesh_msg_ctx *ctx, u8_t page)
                                   msg, timeout_handler, config_msg_timeout,
                                   true, NULL, NULL);
     if (err) {
-        BT_ERR("%s: send failed (err %d)", __func__, err);
+        BT_ERR("%s, send failed (err %d)", __func__, err);
     }
 
     return err;
@@ -706,7 +705,7 @@ static int get_state_u8(struct bt_mesh_msg_ctx *ctx, u32_t op)
     err = bt_mesh_client_send_msg(cli->model, op, ctx, msg, timeout_handler,
                                   config_msg_timeout, true, NULL, NULL);
     if (err) {
-        BT_ERR("%s: send failed (err %d)", __func__, err);
+        BT_ERR("%s, send failed (err %d)", __func__, err);
     }
 
     return err;
@@ -723,7 +722,7 @@ static int set_state_u8(struct bt_mesh_msg_ctx *ctx, u32_t op, u8_t new_val)
     err = bt_mesh_client_send_msg(cli->model, op, ctx, msg, timeout_handler,
                                   config_msg_timeout, true, NULL, NULL);
     if (err) {
-        BT_ERR("%s: send failed (err %d)", __func__, err);
+        BT_ERR("%s, send failed (err %d)", __func__, err);
     }
 
     return err;
@@ -808,7 +807,7 @@ int bt_mesh_cfg_relay_get(struct bt_mesh_msg_ctx *ctx)
                                   timeout_handler, config_msg_timeout,
                                   true, NULL, NULL);
     if (err) {
-        BT_ERR("%s: send failed (err %d)", __func__, err);
+        BT_ERR("%s, send failed (err %d)", __func__, err);
     }
 
     return err;
@@ -832,7 +831,7 @@ int bt_mesh_cfg_relay_set(struct bt_mesh_msg_ctx *ctx, u8_t new_relay,
                                   timeout_handler, config_msg_timeout,
                                   true, NULL, NULL);
     if (err) {
-        BT_ERR("%s: send failed (err %d)", __func__, err);
+        BT_ERR("%s, send failed (err %d)", __func__, err);
     }
 
     return err;
@@ -856,7 +855,7 @@ int bt_mesh_cfg_net_key_add(struct bt_mesh_msg_ctx *ctx, u16_t key_net_idx,
                                   timeout_handler, config_msg_timeout,
                                   true, NULL, NULL);
     if (err) {
-        BT_ERR("%s: send failed (err %d)", __func__, err);
+        BT_ERR("%s, send failed (err %d)", __func__, err);
     }
 
     return err;
@@ -880,7 +879,7 @@ int bt_mesh_cfg_app_key_add(struct bt_mesh_msg_ctx *ctx, u16_t key_net_idx,
                                   timeout_handler, config_msg_timeout,
                                   true, NULL, NULL);
     if (err) {
-        BT_ERR("%s: send failed (err %d)", __func__, err);
+        BT_ERR("%s, send failed (err %d)", __func__, err);
     }
 
     return err;
@@ -908,7 +907,7 @@ int bt_mesh_cfg_mod_app_bind(struct bt_mesh_msg_ctx *ctx, u16_t elem_addr,
                                   timeout_handler, config_msg_timeout,
                                   true, NULL, NULL);
     if (err) {
-        BT_ERR("%s: send failed (err %d)", __func__, err);
+        BT_ERR("%s, send failed (err %d)", __func__, err);
     }
 
     return err;
@@ -931,7 +930,7 @@ static int mod_sub(u32_t op, struct bt_mesh_msg_ctx *ctx, u16_t elem_addr,
     err = bt_mesh_client_send_msg(cli->model, op, ctx, msg, timeout_handler,
                                   config_msg_timeout, true, NULL, NULL);
     if (err) {
-        BT_ERR("%s: send failed (err %d)", __func__, err);
+        BT_ERR("%s, send failed (err %d)", __func__, err);
     }
 
     return err;
@@ -985,7 +984,7 @@ static int mod_sub_va(u32_t op, struct bt_mesh_msg_ctx *ctx, u16_t elem_addr,
     err = bt_mesh_client_send_msg(cli->model, op, ctx, msg, timeout_handler,
                                   config_msg_timeout, true, NULL, NULL);
     if (err) {
-        BT_ERR("%s: send failed (err %d)", __func__, err);
+        BT_ERR("%s, send failed (err %d)", __func__, err);
     }
 
     return err;
@@ -1039,7 +1038,7 @@ int bt_mesh_cfg_mod_pub_get(struct bt_mesh_msg_ctx *ctx, u16_t elem_addr,
                                   timeout_handler, config_msg_timeout,
                                   true, NULL, NULL);
     if (err) {
-        BT_ERR("%s: send failed (err %d)", __func__, err);
+        BT_ERR("%s, send failed (err %d)", __func__, err);
     }
 
     return err;
@@ -1072,7 +1071,7 @@ int bt_mesh_cfg_mod_pub_set(struct bt_mesh_msg_ctx *ctx, u16_t elem_addr,
                                   timeout_handler, config_msg_timeout,
                                   true, NULL, NULL);
     if (err) {
-        BT_ERR("%s: send failed (err %d)", __func__, err);
+        BT_ERR("%s, send failed (err %d)", __func__, err);
     }
 
     return err;
@@ -1097,7 +1096,7 @@ int bt_mesh_cfg_hb_sub_set(struct bt_mesh_msg_ctx *ctx,
                                   msg, timeout_handler, config_msg_timeout,
                                   true, NULL, NULL);
     if (err) {
-        BT_ERR("%s: send failed (err %d)", __func__, err);
+        BT_ERR("%s, send failed (err %d)", __func__, err);
     }
 
     return err;
@@ -1118,7 +1117,7 @@ int bt_mesh_cfg_hb_sub_get(struct bt_mesh_msg_ctx *ctx)
                                   msg, timeout_handler, config_msg_timeout,
                                   true, NULL, NULL);
     if (err) {
-        BT_ERR("%s: send failed (err %d)", __func__, err);
+        BT_ERR("%s, send failed (err %d)", __func__, err);
     }
 
     return err;
@@ -1146,7 +1145,7 @@ int bt_mesh_cfg_hb_pub_set(struct bt_mesh_msg_ctx *ctx,
                                   msg, timeout_handler, config_msg_timeout,
                                   true, NULL, NULL);
     if (err) {
-        BT_ERR("%s: send failed (err %d)", __func__, err);
+        BT_ERR("%s, send failed (err %d)", __func__, err);
     }
 
     return err;
@@ -1167,7 +1166,7 @@ int bt_mesh_cfg_hb_pub_get(struct bt_mesh_msg_ctx *ctx)
                                   msg, timeout_handler, config_msg_timeout,
                                   true, NULL, NULL);
     if (err) {
-        BT_ERR("%s: send failed (err %d)", __func__, err);
+        BT_ERR("%s, send failed (err %d)", __func__, err);
     }
 
     return err;
@@ -1188,7 +1187,7 @@ int bt_mesh_cfg_node_reset(struct bt_mesh_msg_ctx *ctx)
                                   timeout_handler, config_msg_timeout,
                                   true, NULL, NULL);
     if (err) {
-        BT_ERR("%s: send failed (err %d)", __func__, err);
+        BT_ERR("%s, send failed (err %d)", __func__, err);
     }
 
     return err;
@@ -1221,7 +1220,7 @@ int bt_mesh_cfg_mod_pub_va_set(struct bt_mesh_msg_ctx *ctx, u16_t elem_addr,
                                   timeout_handler, config_msg_timeout,
                                   true, NULL, NULL);
     if (err) {
-        BT_ERR("%s: send failed (err %d)", __func__, err);
+        BT_ERR("%s, send failed (err %d)", __func__, err);
     }
 
     return err;
@@ -1248,7 +1247,7 @@ int bt_mesh_cfg_mod_sub_del_all(struct bt_mesh_msg_ctx *ctx, u16_t elem_addr,
                                   timeout_handler, config_msg_timeout,
                                   true, NULL, NULL);
     if (err) {
-        BT_ERR("%s: send failed (err %d)", __func__, err);
+        BT_ERR("%s, send failed (err %d)", __func__, err);
     }
 
     return err;
@@ -1270,7 +1269,7 @@ static int mod_sub_get(u32_t op, struct bt_mesh_msg_ctx *ctx,
     err = bt_mesh_client_send_msg(cli->model, op, ctx, msg, timeout_handler,
                                   config_msg_timeout, true, NULL, NULL);
     if (err) {
-        BT_ERR("%s: send failed (err %d)", __func__, err);
+        BT_ERR("%s, send failed (err %d)", __func__, err);
     }
 
     return err;
@@ -1311,7 +1310,7 @@ int bt_mesh_cfg_net_key_update(struct bt_mesh_msg_ctx *ctx, u16_t net_idx,
                                   timeout_handler, config_msg_timeout,
                                   true, NULL, NULL);
     if (err) {
-        BT_ERR("%s: send failed (err %d)", __func__, err);
+        BT_ERR("%s, send failed (err %d)", __func__, err);
     }
 
     return err;
@@ -1333,7 +1332,7 @@ int bt_mesh_cfg_net_key_delete(struct bt_mesh_msg_ctx *ctx, u16_t net_idx)
                                   timeout_handler, config_msg_timeout,
                                   true, NULL, NULL);
     if (err) {
-        BT_ERR("%s: send failed (err %d)", __func__, err);
+        BT_ERR("%s, send failed (err %d)", __func__, err);
     }
 
     return err;
@@ -1354,7 +1353,7 @@ int bt_mesh_cfg_net_key_get(struct bt_mesh_msg_ctx *ctx)
                                   timeout_handler, config_msg_timeout,
                                   true, NULL, NULL);
     if (err) {
-        BT_ERR("%s: send failed (err %d)", __func__, err);
+        BT_ERR("%s, send failed (err %d)", __func__, err);
     }
 
     return err;
@@ -1378,7 +1377,7 @@ int bt_mesh_cfg_app_key_update(struct bt_mesh_msg_ctx *ctx, u16_t net_idx,
                                   timeout_handler, config_msg_timeout,
                                   true, NULL, NULL);
     if (err) {
-        BT_ERR("%s: send failed (err %d)", __func__, err);
+        BT_ERR("%s, send failed (err %d)", __func__, err);
     }
 
     return err;
@@ -1400,7 +1399,7 @@ int bt_mesh_cfg_app_key_delete(struct bt_mesh_msg_ctx *ctx, u16_t net_idx, u16_t
                                   timeout_handler, config_msg_timeout,
                                   true, NULL, NULL);
     if (err) {
-        BT_ERR("%s: send failed (err %d)", __func__, err);
+        BT_ERR("%s, send failed (err %d)", __func__, err);
     }
 
     return err;
@@ -1422,7 +1421,7 @@ int bt_mesh_cfg_app_key_get(struct bt_mesh_msg_ctx *ctx, u16_t net_idx)
                                   timeout_handler, config_msg_timeout,
                                   true, NULL, NULL);
     if (err) {
-        BT_ERR("%s: send failed (err %d)", __func__, err);
+        BT_ERR("%s, send failed (err %d)", __func__, err);
     }
 
     return err;
@@ -1443,7 +1442,7 @@ static int node_identity_op(u32_t op, struct bt_mesh_msg_ctx *ctx,
     err = bt_mesh_client_send_msg(cli->model, op, ctx, msg, timeout_handler,
                                   config_msg_timeout, true, NULL, NULL);
     if (err) {
-        BT_ERR("%s: send failed (err %d)", __func__, err);
+        BT_ERR("%s, send failed (err %d)", __func__, err);
     }
 
     return err;
@@ -1487,7 +1486,7 @@ int bt_mesh_cfg_mod_app_unbind(struct bt_mesh_msg_ctx *ctx, u16_t elem_addr,
                                   timeout_handler, config_msg_timeout,
                                   true, NULL, NULL);
     if (err) {
-        BT_ERR("%s: send failed (err %d)", __func__, err);
+        BT_ERR("%s, send failed (err %d)", __func__, err);
     }
 
     return err;
@@ -1509,7 +1508,7 @@ static int mod_app_get(u32_t op, struct bt_mesh_msg_ctx *ctx,
     err = bt_mesh_client_send_msg(cli->model, op, ctx, msg, timeout_handler,
                                   config_msg_timeout, true, NULL, NULL);
     if (err) {
-        BT_ERR("%s: send failed (err %d)", __func__, err);
+        BT_ERR("%s, send failed (err %d)", __func__, err);
     }
 
     return err;
@@ -1547,7 +1546,7 @@ static int kr_phase_op(u32_t op, struct bt_mesh_msg_ctx *ctx,
     err = bt_mesh_client_send_msg(cli->model, op, ctx, msg, timeout_handler,
                                   config_msg_timeout, true, NULL, NULL);
     if (err) {
-        BT_ERR("%s: send failed (err %d)", __func__, err);
+        BT_ERR("%s, send failed (err %d)", __func__, err);
     }
 
     return err;
@@ -1585,7 +1584,7 @@ int bt_mesh_cfg_lpn_timeout_get(struct bt_mesh_msg_ctx *ctx, u16_t lpn_addr)
                                   timeout_handler, config_msg_timeout,
                                   true, NULL, NULL);
     if (err) {
-        BT_ERR("%s: send failed (err %d)", __func__, err);
+        BT_ERR("%s, send failed (err %d)", __func__, err);
     }
 
     return err;
@@ -1619,8 +1618,8 @@ void bt_mesh_cfg_cli_timeout_set(s32_t timeout)
 
 int bt_mesh_cfg_cli_init(struct bt_mesh_model *model, bool primary)
 {
-    bt_mesh_config_client_t *client   = NULL;
-    config_internal_data_t  *internal = NULL;
+    config_internal_data_t *internal = NULL;
+    bt_mesh_config_client_t *client = NULL;
 
     BT_DBG("primary %u", primary);
 
@@ -1649,17 +1648,15 @@ int bt_mesh_cfg_cli_init(struct bt_mesh_model *model, bool primary)
 
     sys_slist_init(&internal->queue);
 
-    client->model         = model;
-    client->op_pair_size  = ARRAY_SIZE(cfg_op_pair);
-    client->op_pair       = cfg_op_pair;
+    client->model = model;
+    client->op_pair_size = ARRAY_SIZE(cfg_op_pair);
+    client->op_pair = cfg_op_pair;
     client->internal_data = internal;
 
     cli = client;
 
     /* Configuration Model security is device-key based */
-    model->keys[0] = BT_MESH_KEY_DEV;
+    model->keys[0] = BLE_MESH_KEY_DEV;
 
     return 0;
 }
-
-#endif /* #if CONFIG_BT_MESH */

@@ -52,12 +52,12 @@ static const esp_ble_mesh_client_op_pair_t fast_prov_cli_op_pair[] = {
 static esp_ble_mesh_cfg_srv_t config_server = {
     .relay = ESP_BLE_MESH_RELAY_DISABLED,
     .beacon = ESP_BLE_MESH_BEACON_ENABLED,
-#if defined(CONFIG_BT_MESH_FRIEND)
+#if defined(CONFIG_BLE_MESH_FRIEND)
     .friend_state = ESP_BLE_MESH_FRIEND_ENABLED,
 #else
     .friend_state = ESP_BLE_MESH_FRIEND_NOT_SUPPORTED,
 #endif
-#if defined(CONFIG_BT_MESH_GATT_PROXY)
+#if defined(CONFIG_BLE_MESH_GATT_PROXY)
     .gatt_proxy = ESP_BLE_MESH_GATT_PROXY_ENABLED,
 #else
     .gatt_proxy = ESP_BLE_MESH_GATT_PROXY_NOT_SUPPORTED,

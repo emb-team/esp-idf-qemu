@@ -8,12 +8,12 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-#ifndef __BT_MESH_HEALTH_CLI_H
-#define __BT_MESH_HEALTH_CLI_H
+#ifndef _BLE_MESH_HEALTH_CLI_H_
+#define _BLE_MESH_HEALTH_CLI_H_
 
 #include "mesh_access.h"
 #include "mesh_kernel.h"
-#include "bt_mesh_client_common.h"
+#include "model_common.h"
 
 /**
  * @brief Bluetooth Mesh
@@ -30,9 +30,9 @@ typedef bt_mesh_internal_data_t health_client_internal_data_t;
 
 extern const struct bt_mesh_model_op bt_mesh_health_cli_op[];
 
-#define BT_MESH_MODEL_HEALTH_CLI(cli_data)                                   \
-        BT_MESH_MODEL(BT_MESH_MODEL_ID_HEALTH_CLI,                   \
-                  bt_mesh_health_cli_op, NULL, cli_data)
+#define BLE_MESH_MODEL_HEALTH_CLI(cli_data)             \
+        BLE_MESH_MODEL(BLE_MESH_MODEL_ID_HEALTH_CLI,    \
+            bt_mesh_health_cli_op, NULL, cli_data)
 
 int bt_mesh_health_cli_set(struct bt_mesh_model *model);
 
@@ -75,4 +75,4 @@ struct bt_mesh_health_fault_status {
  * @}
  */
 
-#endif /* __BT_MESH_HEALTH_CLI_H */
+#endif /* __BLE_MESH_HEALTH_CLI_H */

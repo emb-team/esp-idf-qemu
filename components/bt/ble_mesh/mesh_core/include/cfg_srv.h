@@ -7,8 +7,8 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-#ifndef __BT_MESH_CFG_SRV_H
-#define __BT_MESH_CFG_SRV_H
+#ifndef _BLE_MESH_CFG_SRV_H_
+#define _BLE_MESH_CFG_SRV_H_
 
 #include "mesh_access.h"
 #include "mesh_kernel.h"
@@ -61,12 +61,12 @@ struct bt_mesh_cfg_srv {
 
 extern const struct bt_mesh_model_op bt_mesh_cfg_srv_op[];
 
-#define BT_MESH_MODEL_CFG_SRV(srv_data)                                      \
-        BT_MESH_MODEL(BT_MESH_MODEL_ID_CFG_SRV,                      \
-                  bt_mesh_cfg_srv_op, NULL, srv_data)
+#define BLE_MESH_MODEL_CFG_SRV(srv_data)            \
+        BLE_MESH_MODEL(BLE_MESH_MODEL_ID_CFG_SRV,   \
+            bt_mesh_cfg_srv_op, NULL, srv_data)
 
 /**
  * @}
  */
 
-#endif /* __BT_MESH_CFG_SRV_H */
+#endif /* __BLE_MESH_CFG_SRV_H */

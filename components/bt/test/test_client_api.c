@@ -183,7 +183,7 @@ static int ble_mesh_init(void)
         return err;
     }
 
-    esp_ble_mesh_node_prov_enable(BT_MESH_PROV_ADV | BT_MESH_PROV_GATT);
+    esp_ble_mesh_node_prov_enable(BLE_MESH_PROV_ADV | BLE_MESH_PROV_GATT);
 
     ESP_LOGI(TAG, "Mesh initialized\n");
 

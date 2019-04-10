@@ -22,7 +22,7 @@
 
 #define MESH_NAME_SIZE  31
 
-#if CONFIG_BT_MESH_PROVISIONER
+#if CONFIG_BLE_MESH_PROVISIONER
 
 /* Each node information stored by provisioner */
 struct bt_mesh_node_t {
@@ -105,11 +105,11 @@ int bt_mesh_provisioner_bind_local_app_net_idx(u16_t net_idx, u16_t app_idx);
 /* Provisioner print own element information */
 int bt_mesh_provisioner_print_local_element_info(void);
 
-#endif /* CONFIG_BT_MESH_PROVISIONER */
+#endif /* CONFIG_BLE_MESH_PROVISIONER */
 
 /* The following APIs are for fast provisioning */
 
-#if CONFIG_BT_MESH_FAST_PROV
+#if CONFIG_BLE_MESH_FAST_PROV
 
 const u8_t *get_fast_prov_device_key(u16_t dst_addr);
 
@@ -125,6 +125,6 @@ const u8_t *bt_mesh_get_fast_prov_net_key(u16_t net_idx);
 
 const u8_t *bt_mesh_get_fast_prov_app_key(u16_t net_idx, u16_t app_idx);
 
-#endif /* CONFIG_BT_MESH_FAST_PROV */
+#endif /* CONFIG_BLE_MESH_FAST_PROV */
 
 #endif /* _PROVISIONER_MAIN_H_ */

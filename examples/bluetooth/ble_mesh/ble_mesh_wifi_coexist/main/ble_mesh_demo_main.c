@@ -50,7 +50,7 @@
 
 extern struct _led_state led_state[3];
 extern struct k_delayed_work send_self_prov_node_addr_timer;
-extern atomic_t fast_prov_cli_flags;
+extern bt_mesh_atomic_t fast_prov_cli_flags;
 
 static uint8_t dev_uuid[16] = { 0xdd, 0xdd };
 static uint8_t prov_start_num = 0;
@@ -70,12 +70,12 @@ esp_ble_mesh_client_t config_client;
 esp_ble_mesh_cfg_srv_t config_server = {
     .relay = ESP_BLE_MESH_RELAY_ENABLED,
     .beacon = ESP_BLE_MESH_BEACON_DISABLED,
-#if defined(CONFIG_BT_MESH_FRIEND)
+#if defined(CONFIG_BLE_MESH_FRIEND)
     .friend_state = ESP_BLE_MESH_FRIEND_ENABLED,
 #else
     .friend_state = ESP_BLE_MESH_FRIEND_NOT_SUPPORTED,
 #endif
-#if defined(CONFIG_BT_MESH_GATT_PROXY)
+#if defined(CONFIG_BLE_MESH_GATT_PROXY)
     .gatt_proxy = ESP_BLE_MESH_GATT_PROXY_ENABLED,
 #else
     .gatt_proxy = ESP_BLE_MESH_GATT_PROXY_NOT_SUPPORTED,
@@ -204,7 +204,7 @@ static void gen_onoff_get_handler(esp_ble_mesh_model_t *model,
     /* When the node receives the first Generic OnOff Get/Set/Set Unack message, it will
      * start the timer used to disable fast provisioning functionality.
      */
-    if (!atomic_test_and_set_bit(fast_prov_server.srv_flags, DISABLE_FAST_PROV_START)) {
+    if (!bt_mesh_atomic_test_and_set_bit(fast_prov_server.srv_flags, DISABLE_FAST_PROV_START)) {
         k_delayed_work_submit(&fast_prov_server.disable_fast_prov_timer, DISABLE_FAST_PROV_TIMEOUT);
     }
 }
@@ -232,7 +232,7 @@ static void gen_onoff_set_unack_handler(esp_ble_mesh_model_t *model,
     /* When the node receives the first Generic OnOff Get/Set/Set Unack message, it will
      * start the timer used to disable fast provisioning functionality.
      */
-    if (!atomic_test_and_set_bit(fast_prov_server.srv_flags, DISABLE_FAST_PROV_START)) {
+    if (!bt_mesh_atomic_test_and_set_bit(fast_prov_server.srv_flags, DISABLE_FAST_PROV_START)) {
         k_delayed_work_submit(&fast_prov_server.disable_fast_prov_timer, DISABLE_FAST_PROV_TIMEOUT);
     }
 }
@@ -308,10 +308,10 @@ static void provisioner_prov_complete(int node_idx, const uint8_t uuid[16], uint
             return;
         }
         if (fast_prov_server.node_addr_cnt <= fast_prov_server.max_node_num) {
-            if (atomic_test_and_clear_bit(fast_prov_server.srv_flags, SEND_ALL_NODE_ADDR_START)) {
+            if (bt_mesh_atomic_test_and_clear_bit(fast_prov_server.srv_flags, SEND_ALL_NODE_ADDR_START)) {
                 k_delayed_work_cancel(&fast_prov_server.send_all_node_addr_timer);
             }
-            if (!atomic_test_and_set_bit(fast_prov_server.srv_flags, SEND_ALL_NODE_ADDR_START)) {
+            if (!bt_mesh_atomic_test_and_set_bit(fast_prov_server.srv_flags, SEND_ALL_NODE_ADDR_START)) {
                 k_delayed_work_submit(&fast_prov_server.send_all_node_addr_timer, SEND_ALL_NODE_ADDR_TIMEOUT);
             }
         }
@@ -319,15 +319,15 @@ static void provisioner_prov_complete(int node_idx, const uint8_t uuid[16], uint
         /* When a device is provisioned, the non-primary Provisioner shall reset the timer
          * which is used to send node addresses to the primary Provisioner.
          */
-        if (atomic_test_and_clear_bit(&fast_prov_cli_flags, SEND_SELF_PROV_NODE_ADDR_START)) {
+        if (bt_mesh_atomic_test_and_clear_bit(&fast_prov_cli_flags, SEND_SELF_PROV_NODE_ADDR_START)) {
             k_delayed_work_cancel(&send_self_prov_node_addr_timer);
         }
-        if (!atomic_test_and_set_bit(&fast_prov_cli_flags, SEND_SELF_PROV_NODE_ADDR_START)) {
+        if (!bt_mesh_atomic_test_and_set_bit(&fast_prov_cli_flags, SEND_SELF_PROV_NODE_ADDR_START)) {
             k_delayed_work_submit(&send_self_prov_node_addr_timer, SEND_SELF_PROV_NODE_ADDR_TIMEOUT);
         }
     }
 
-    if (atomic_test_bit(fast_prov_server.srv_flags, DISABLE_FAST_PROV_START)) {
+    if (bt_mesh_atomic_test_bit(fast_prov_server.srv_flags, DISABLE_FAST_PROV_START)) {
         /* When a device is provisioned, and the stop_prov flag of the Provisioner has been
          * set, the Provisioner shall reset the timer which is used to stop the provisioner
          * functionality.

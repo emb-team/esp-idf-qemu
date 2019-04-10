@@ -8,8 +8,8 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-#ifndef __NET_BUF_H
-#define __NET_BUF_H
+#ifndef _BLE_MESH_BUF_H_
+#define _BLE_MESH_BUF_H_
 
 #include <stddef.h>
 #include "sys/cdefs.h"
@@ -22,14 +22,13 @@
 extern "C" {
 #endif
 
-
 /* Unaligned access */
-#define UNALIGNED_GET(p)                        \
+#define UNALIGNED_GET(p)                    \
 __extension__ ({                            \
-    struct  __attribute__((__packed__)) {               \
-        __typeof__(*(p)) __v;                   \
-    } *__p = (__typeof__(__p)) (p);                 \
-    __p->__v;                           \
+    struct  __attribute__((__packed__)) {   \
+        __typeof__(*(p)) __v;               \
+    } *__p = (__typeof__(__p)) (p);         \
+    __p->__v;                               \
 })
 
 /**
@@ -57,12 +56,12 @@ __extension__ ({                            \
  *
  *  @return Pointer to stack-allocated net_buf_simple object.
  */
-#define NET_BUF_SIMPLE(_size)                        \
-    ((struct net_buf_simple *)(&(struct {        \
-        struct net_buf_simple buf;           \
-        u8_t data[_size] __net_buf_align; \
-    }) {                                         \
-        .buf.size = _size,                   \
+#define NET_BUF_SIMPLE(_size)               \
+    ((struct net_buf_simple *)(&(struct {   \
+        struct net_buf_simple buf;          \
+        u8_t data[_size] __net_buf_align;   \
+    }) {                                    \
+        .buf.size = _size,                  \
     }))
 
 /** @brief Simple network buffer representation.
@@ -93,24 +92,6 @@ struct net_buf_simple {
      */
     u8_t __buf[0] __net_buf_align;
 };
-
-/** @def NET_BUF_SIMPLE_DEFINE_STATIC
- *  @brief Define a static net_buf_simple variable.
- *
- *  This is a helper macro which is used to define a static net_buf_simple
- *  object.
- *
- *  @param _name Name of the net_buf_simple object.
- *  @param _size Maximum data storage for the buffer.
- */
-#define NET_BUF_SIMPLE_DEFINE_STATIC(_name, _size)        \
-    static __noinit u8_t net_buf_data_##_name[_size]; \
-    static struct net_buf_simple _name = {            \
-        .data   = net_buf_data_##_name,           \
-        .len    = 0,                              \
-        .size   = _size,                          \
-        .__buf  = net_buf_data_##_name,           \
-    }
 
 /** @brief Initialize a net_buf_simple object.
  *
@@ -484,9 +465,6 @@ struct net_buf {
 };
 
 struct net_buf_pool {
-    /** LIFO to place the buffer into when free */
-    struct k_lifo free;
-
     /** Number of buffers in pool */
     const u16_t buf_count;
 
@@ -499,7 +477,7 @@ struct net_buf_pool {
     /** Size of the user data associated with each buffer. */
     const u16_t user_data_size;
 
-#if defined(CONFIG_NET_BUF_POOL_USAGE)
+#if defined(CONFIG_BLE_MESH_NET_BUF_POOL_USAGE)
     /** Amount of available buffers in the pool. */
     s16_t avail_count;
 
@@ -508,7 +486,7 @@ struct net_buf_pool {
 
     /** Name of the pool. Used when printing pool information. */
     const char *name;
-#endif /* CONFIG_NET_BUF_POOL_USAGE */
+#endif /* CONFIG_BLE_MESH_NET_BUF_POOL_USAGE */
 
     /** Optional destroy callback when buffer is freed. */
     void (*const destroy)(struct net_buf *buf);
@@ -517,34 +495,32 @@ struct net_buf_pool {
     struct net_buf *const __bufs;
 };
 
-#if defined(CONFIG_NET_BUF_POOL_USAGE)
-#define NET_BUF_POOL_INITIALIZER(_pool, _bufs, _count, _size, _ud_size,      \
-                 _destroy)                                   \
-    {                                                                    \
-        .free = _K_LIFO_INITIALIZER(_pool.free),                      \
-        .__bufs = (struct net_buf *)_bufs,                           \
-        .buf_count = _count,                                         \
-        .uninit_count = _count,                                      \
-        .avail_count = _count,                                       \
-        .pool_size = sizeof(_net_buf_##_pool),                  \
-        .buf_size = _size,                                           \
-        .user_data_size = _ud_size,                                  \
-        .destroy = _destroy,                                         \
-        .name = STRINGIFY(_pool),                                    \
+#if defined(CONFIG_BLE_MESH_NET_BUF_POOL_USAGE)
+#define NET_BUF_POOL_INITIALIZER(_pool, _bufs, _count, _size, _ud_size, \
+                 _destroy)                                              \
+    {                                                                   \
+        .__bufs = (struct net_buf *)_bufs,                              \
+        .buf_count = _count,                                            \
+        .uninit_count = _count,                                         \
+        .avail_count = _count,                                          \
+        .pool_size = sizeof(_net_buf_##_pool),                          \
+        .buf_size = _size,                                              \
+        .user_data_size = _ud_size,                                     \
+        .destroy = _destroy,                                            \
+        .name = STRINGIFY(_pool),                                       \
     }
 #else
-#define NET_BUF_POOL_INITIALIZER(_pool, _bufs, _count, _size, _ud_size,      \
-                 _destroy)                                   \
-    {                                                                    \
-        .free = _K_LIFO_INITIALIZER(_pool.free),                      \
-        .__bufs = (struct net_buf *)_bufs,                           \
-        .buf_count = _count,                                         \
-        .uninit_count = _count,                                      \
-        .buf_size = _size,                                           \
-        .user_data_size = _ud_size,                                  \
-        .destroy = _destroy,                                         \
+#define NET_BUF_POOL_INITIALIZER(_pool, _bufs, _count, _size, _ud_size, \
+                 _destroy)                                              \
+    {                                                                   \
+        .__bufs = (struct net_buf *)_bufs,                              \
+        .buf_count = _count,                                            \
+        .uninit_count = _count,                                         \
+        .buf_size = _size,                                              \
+        .user_data_size = _ud_size,                                     \
+        .destroy = _destroy,                                            \
     }
-#endif /* CONFIG_NET_BUF_POOL_USAGE */
+#endif /* CONFIG_BLE_MESH_NET_BUF_POOL_USAGE */
 
 /** @def NET_BUF_POOL_DEFINE
  *  @brief Define a new pool for buffers
@@ -578,30 +554,6 @@ struct net_buf_pool {
         NET_BUF_POOL_INITIALIZER(_name, _net_buf_##_name,                    \
                      _count, _size, _ud_size, _destroy)
 
-
-/**
- *  @brief Looks up a pool based on its ID.
- *
- *  @param id Pool ID (e.g. from buf->pool_id).
- *
- *  @return Pointer to pool.
- */
-struct net_buf_pool *net_buf_pool_get(int id);
-
-/**
- *  @brief Get a zero-based index for a buffer.
- *
- *  This function will translate a buffer into a zero-based index,
- *  based on its placement in its buffer pool. This can be useful if you
- *  want to associate an external array of meta-data contexts with the
- *  buffers of a pool.
- *
- *  @param buf  Network buffer.
- *
- *  @return Zero-based index for the buffer.
- */
-int net_buf_id(struct net_buf *buf);
-
 /**
  *  @brief Allocate a new buffer from a pool.
  *
@@ -615,52 +567,14 @@ int net_buf_id(struct net_buf *buf);
  *
  *  @return New buffer or NULL if out of buffers.
  */
-#if defined(CONFIG_NET_BUF_LOG)
+#if defined(CONFIG_BLE_MESH_NET_BUF_LOG)
 struct net_buf *net_buf_alloc_debug(struct net_buf_pool *pool, s32_t timeout,
                                     const char *func, int line);
 #define net_buf_alloc(_pool, _timeout) \
-    net_buf_alloc_debug(_pool, _timeout, __func__, __LINE__)
+        net_buf_alloc_debug(_pool, _timeout, __func__, __LINE__)
 #else
 struct net_buf *net_buf_alloc(struct net_buf_pool *pool, s32_t timeout);
 #endif
-
-/**
- *  @brief Get a buffer from a FIFO.
- *
- *  Get buffer from a FIFO.
- *
- *  @param fifo Which FIFO to take the buffer from.
- *  @param timeout Affects the action taken should the FIFO be empty.
- *         If K_NO_WAIT, then return immediately. If K_FOREVER, then wait as
- *         long as necessary. Otherwise, wait up to the specified number of
- *         milliseconds before timing out.
- *
- *  @return New buffer or NULL if the FIFO is empty.
- */
-#if defined(CONFIG_NET_BUF_LOG)
-struct net_buf *net_buf_get_debug(struct k_fifo *fifo, s32_t timeout,
-                                  const char *func, int line);
-#define net_buf_get(_fifo, _timeout) \
-    net_buf_get_debug(_fifo, _timeout, __func__, __LINE__)
-#else
-struct net_buf *net_buf_get(struct k_fifo *fifo, s32_t timeout);
-#endif
-
-/**
- *  @brief Destroy buffer from custom destroy callback
- *
- *  This helper is only intended to be used from custom destroy callbacks.
- *  If no custom destroy callback is given to NET_BUF_POOL_DEFINE() then
- *  there is no need to use this API.
- *
- *  @param buf Buffer to destroy.
- */
-static inline void net_buf_destroy(struct net_buf *buf)
-{
-    //struct net_buf_pool *pool = net_buf_pool_get(buf->pool_id);
-    // TODO: should replace the following funcion in our system
-    //k_lifo_put(&pool->free, buf);
-}
 
 /**
  *  @brief Reset buffer
@@ -708,18 +622,6 @@ void net_buf_slist_put(sys_slist_t *list, struct net_buf *buf);
 struct net_buf *net_buf_slist_get(sys_slist_t *list);
 
 /**
- *  @brief Put a buffer into a FIFO
- *
- *  Put a buffer to the end of a FIFO. If the buffer contains follow-up
- *  fragments this function will take care of inserting them as well
- *  into the FIFO.
- *
- *  @param fifo Which FIFO to put the buffer to.
- *  @param buf Buffer.
- */
-void net_buf_put(struct k_fifo *fifo, struct net_buf *buf);
-
-/**
  *  @brief Decrements the reference count of a buffer.
  *
  *  Decrements the reference count of a buffer and puts it back into the
@@ -727,10 +629,10 @@ void net_buf_put(struct k_fifo *fifo, struct net_buf *buf);
  *
  *  @param buf A valid pointer on a buffer
  */
-#if defined(CONFIG_NET_BUF_LOG)
+#if defined(CONFIG_BLE_MESH_NET_BUF_LOG)
 void net_buf_unref_debug(struct net_buf *buf, const char *func, int line);
 #define net_buf_unref(_buf) \
-    net_buf_unref_debug(_buf, __func__, __LINE__)
+        net_buf_unref_debug(_buf, __func__, __LINE__)
 #else
 void net_buf_unref(struct net_buf *buf);
 #endif
@@ -743,21 +645,6 @@ void net_buf_unref(struct net_buf *buf);
  *  @return the buffer newly referenced
  */
 struct net_buf *net_buf_ref(struct net_buf *buf);
-
-/**
- *  @brief Duplicate buffer
- *
- *  Duplicate given buffer including any data and headers currently stored.
- *
- *  @param buf A valid pointer on a buffer
- *  @param timeout Affects the action taken should the pool be empty.
- *         If K_NO_WAIT, then return immediately. If K_FOREVER, then
- *         wait as long as necessary. Otherwise, wait up to the specified
- *         number of milliseconds before timing out.
- *
- *  @return Duplicated buffer or NULL if out of buffers.
- */
-struct net_buf *net_buf_clone(struct net_buf *buf, s32_t timeout);
 
 /**
  *  @brief Get a pointer to the user data of a buffer.
@@ -798,8 +685,7 @@ static inline void *net_buf_user_data(struct net_buf *buf)
  *
  *  @return The original tail of the buffer.
  */
-#define net_buf_add_mem(buf, mem, len) net_buf_simple_add_mem(&(buf)->b, \
-                                  mem, len)
+#define net_buf_add_mem(buf, mem, len) net_buf_simple_add_mem(&(buf)->b, mem, len)
 
 /**
  *  @def net_buf_add_u8
@@ -1020,90 +906,6 @@ static inline void *net_buf_user_data(struct net_buf *buf)
 #define net_buf_headroom(buf) net_buf_simple_headroom(&(buf)->b)
 
 /**
- *  @def net_buf_tail
- *  @brief Get the tail pointer for a buffer.
- *
- *  Get a pointer to the end of the data in a buffer.
- *
- *  @param buf Buffer.
- *
- *  @return Tail pointer for the buffer.
- */
-#define net_buf_tail(buf) net_buf_simple_tail(&(buf)->b)
-
-/** @brief Find the last fragment in the fragment list.
- *
- * @return Pointer to last fragment in the list.
- */
-struct net_buf *net_buf_frag_last(struct net_buf *frags);
-
-/** @brief Insert a new fragment to a chain of bufs.
- *
- *  Insert a new fragment into the buffer fragments list after the parent.
- *
- *  Note: This function takes ownership of the fragment reference so the
- *  caller is not required to unref.
- *
- *  @param parent Parent buffer/fragment.
- *  @param frag Fragment to insert.
- */
-void net_buf_frag_insert(struct net_buf *parent, struct net_buf *frag);
-
-/** @brief Add a new fragment to the end of a chain of bufs.
- *
- *  Append a new fragment into the buffer fragments list.
- *
- *  Note: This function takes ownership of the fragment reference so the
- *  caller is not required to unref.
- *
- *  @param head Head of the fragment chain.
- *  @param frag Fragment to add.
- *
- *  @return New head of the fragment chain. Either head (if head
- *          was non-NULL) or frag (if head was NULL).
- */
-struct net_buf *net_buf_frag_add(struct net_buf *head, struct net_buf *frag);
-
-/** @brief Delete existing fragment from a chain of bufs.
- *
- *  @param parent Parent buffer/fragment, or NULL if there is no parent.
- *  @param frag Fragment to delete.
- *
- *  @return Pointer to the buffer following the fragment, or NULL if it
- *          had no further fragments.
- */
-#if defined(CONFIG_NET_BUF_LOG)
-struct net_buf *net_buf_frag_del_debug(struct net_buf *parent,
-                                       struct net_buf *frag,
-                                       const char *func, int line);
-#define net_buf_frag_del(_parent, _frag) \
-    net_buf_frag_del_debug(_parent, _frag, __func__, __LINE__)
-#else
-struct net_buf *net_buf_frag_del(struct net_buf *parent, struct net_buf *frag);
-#endif
-
-/** @brief Calculate amount of bytes stored in fragments.
- *
- *  Calculates the total amount of data stored in the given buffer and the
- *  fragments linked to it.
- *
- *  @param buf Buffer to start off with.
- *
- *  @return Number of bytes in the buffer and its fragments.
- */
-static inline size_t net_buf_frags_len(struct net_buf *buf)
-{
-    size_t bytes = 0;
-
-    while (buf) {
-        bytes += buf->len;
-        buf = buf->frags;
-    }
-
-    return bytes;
-}
-
-/**
  * @}
  */
 
@@ -1111,8 +913,5 @@ static inline size_t net_buf_frags_len(struct net_buf *buf)
 }
 #endif
 
-
-
-
-#endif /* __NET_BUF_H */
+#endif /* _BLE_MESH_BUF_H_ */
 

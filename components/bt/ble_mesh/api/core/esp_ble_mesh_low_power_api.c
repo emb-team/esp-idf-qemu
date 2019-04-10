@@ -12,26 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <string.h>
-#include <errno.h>
+#include <stdint.h>
 
 #include "btc/btc_task.h"
 #include "btc/btc_manage.h"
-#include "osi/allocator.h"
 
-#include "esp_bt_defs.h"
 #include "esp_err.h"
+#include "esp_bt_defs.h"
 #include "esp_bt_main.h"
-#include "sdkconfig.h"
 
 #include "btc_ble_mesh_prov.h"
-
-#include "mesh.h"
-#include "mesh_buf.h"
-#include "transport.h"
 #include "esp_ble_mesh_defs.h"
-
-#if CONFIG_BT_MESH
-
-#endif /* #if CONFIG_BT_MESH */
 
