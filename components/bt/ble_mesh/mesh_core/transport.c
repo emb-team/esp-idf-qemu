@@ -253,7 +253,7 @@ static void seg_tx_send_unacked(struct seg_tx *tx)
         }
 
         if (!(BLE_MESH_ADV(seg)->seg.attempts--)) {
-            BT_ERR("%s, Ran out of retransmit attempts", __func__);
+            BT_WARN("Ran out of retransmit attempts");
             seg_tx_complete(tx, -ETIMEDOUT);
             return;
         }

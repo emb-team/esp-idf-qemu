@@ -70,6 +70,7 @@ static sys_slist_t bt_mesh_gatts_db;
 static struct bt_mesh_conn bt_mesh_gatts_conn[CONFIG_BT_MAX_CONN];
 static struct bt_mesh_conn_cb *bt_mesh_gatts_conn_cb;
 static tBTA_GATTS_IF bt_mesh_gatts_if;
+static BD_ADDR bt_mesh_gatts_addr;
 static u16_t svc_handle, char_handle;
 static future_t *future_mesh;
 
@@ -541,8 +542,13 @@ static void bt_mesh_bta_gatts_cb(tBTA_GATTS_EVT event, tBTA_GATTS *p_data)
                 bt_mesh_gatts_conn[index].handle = BLE_MESH_GATT_GET_CONN_ID(p_data->conn.conn_id);
                 (bt_mesh_gatts_conn_cb->connected)(&bt_mesh_gatts_conn[index], 0);
             }
-            /* Send GATT service change indication */
-            BTA_GATTS_SendServiceChangeIndication(p_data->conn.server_if, p_data->conn.remote_bda);
+            memcpy(bt_mesh_gatts_addr, p_data->conn.remote_bda, BLE_MESH_ADDR_LEN);
+            /* This is for EspBleMesh Android app. When it tries to connect with the
+             * device at the first time and it fails due to some reason. And after
+             * the second connection, the device needs to send GATT service change
+             * indication to the phone manually to notify it dicovering service again.
+             */
+            BTA_GATTS_SendServiceChangeIndication(bt_mesh_gatts_if, bt_mesh_gatts_addr);
         }
         break;
     case BTA_GATTS_DISCONNECT_EVT:
@@ -555,6 +561,7 @@ static void bt_mesh_bta_gatts_cb(tBTA_GATTS_EVT event, tBTA_GATTS *p_data)
                 bt_mesh_gatts_conn[index].handle = BLE_MESH_GATT_GET_CONN_ID(p_data->conn.conn_id);
                 (bt_mesh_gatts_conn_cb->disconnected)(&bt_mesh_gatts_conn[index], p_data->conn.reason);
             }
+            memset(bt_mesh_gatts_addr, 0x0, BLE_MESH_ADDR_LEN);
         }
         break;
     case BTA_GATTS_CLOSE_EVT:
@@ -947,6 +954,9 @@ int bt_mesh_gatts_service_stop(struct bt_mesh_gatt_service *svc)
 
 int bt_mesh_gatts_service_start(struct bt_mesh_gatt_service *svc)
 {
+    struct bt_mesh_uuid_16 *uuid_16 = NULL;
+    struct bt_mesh_uuid *uuid = NULL;
+
     if (!svc) {
         BT_ERR("%s, Invalid parameter", __func__);
         return -EINVAL;
@@ -955,6 +965,20 @@ int bt_mesh_gatts_service_start(struct bt_mesh_gatt_service *svc)
     BT_DBG("Start service:%d", svc->attrs[0].handle);
 
     BTA_GATTS_StartService(svc->attrs[0].handle, BTA_GATT_TRANSPORT_LE);
+
+    /* For EspBleMesh Android app, it does not disconnect after provisioning
+     * is done, and hence we send GATT service change indication manually
+     * when Mesh Proxy Service is started after provisioning.
+     */
+    uuid = (struct bt_mesh_uuid *)svc->attrs[0].user_data;
+    if (uuid && uuid->type == BLE_MESH_UUID_TYPE_16) {
+        uuid_16 = (struct bt_mesh_uuid_16 *)uuid;
+        BT_DBG("%s, type 0x%02x, val 0x%04x", __func__, uuid_16->uuid.type, uuid_16->val);
+        if (uuid_16->val == BLE_MESH_UUID_MESH_PROXY_VAL) {
+            BTA_GATTS_SendServiceChangeIndication(bt_mesh_gatts_if, bt_mesh_gatts_addr);
+        }
+    }
+
     return 0;
 }
 #endif /* defined(CONFIG_BLE_MESH_NODE) && CONFIG_BLE_MESH_NODE */
