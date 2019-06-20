@@ -113,10 +113,12 @@ static esp_ble_mesh_model_pub_t onoff_pub = {
 };
 
 static esp_ble_mesh_model_op_t fast_prov_srv_op[] = {
-    { ESP_BLE_MESH_VND_MODEL_OP_FAST_PROV_INFO_SET,      3,  NULL },
-    { ESP_BLE_MESH_VND_MODEL_OP_FAST_PROV_NET_KEY_ADD,   16, NULL },
-    { ESP_BLE_MESH_VND_MODEL_OP_FAST_PROV_NODE_ADDR,     2,  NULL },
-    { ESP_BLE_MESH_VND_MODEL_OP_FAST_PROV_NODE_ADDR_GET, 0,  NULL },
+    { ESP_BLE_MESH_VND_MODEL_OP_FAST_PROV_INFO_SET,          3,  NULL },
+    { ESP_BLE_MESH_VND_MODEL_OP_FAST_PROV_NET_KEY_ADD,       16, NULL },
+    { ESP_BLE_MESH_VND_MODEL_OP_FAST_PROV_NODE_ADDR,         2,  NULL },
+    { ESP_BLE_MESH_VND_MODEL_OP_FAST_PROV_NODE_ADDR_GET,     0,  NULL },
+    { ESP_BLE_MESH_VND_MODEL_OP_FAST_PROV_NODE_GROUP_ADD,    2,  NULL },
+    { ESP_BLE_MESH_VND_MODEL_OP_FAST_PROV_NODE_GROUP_DELETE, 2,  NULL },
     ESP_BLE_MESH_MODEL_OP_END,
 };
 
@@ -179,7 +181,6 @@ static void gen_onoff_get_handler(esp_ble_mesh_model_t *model,
     }
 
     send_data = led->current;
-    ESP_LOGI(TAG, "%s, addr 0x%04x onoff 0x%02x", __func__, model->element->element_addr, led->current);
 
     /* Sends Generic OnOff Status as a reponse to Generic OnOff Get */
     err = esp_ble_mesh_server_model_send_msg(model, ctx, ESP_BLE_MESH_MODEL_OP_GEN_ONOFF_STATUS,
@@ -210,12 +211,7 @@ static void gen_onoff_set_unack_handler(esp_ble_mesh_model_t *model,
     }
 
     led->current = data[0];
-    ESP_LOGI(TAG, "addr 0x%02x onoff 0x%02x", model->element->element_addr, led->current);
-
-    if (led_action_task_post(led, portMAX_DELAY) != ESP_OK) {
-        ESP_LOGE(TAG, "%s: Failed to post led action to queue", __func__);
-        return;
-    }
+    gpio_set_level(led->pin, led->current);
 
     /* When the node receives the first Generic OnOff Get/Set/Set Unack message, it will
      * start the timer used to disable fast provisioning functionality.
@@ -268,6 +264,9 @@ static void provisioner_prov_complete(int node_idx, const uint8_t uuid[16], uint
         fast_prov_server.prov_node_cnt++;
     }
 
+    ESP_LOG_BUFFER_HEX("Device uuid", uuid + 2, 6);
+    ESP_LOGI(TAG, "Unicast address 0x%04x", unicast_addr);
+
     /* Sets node info */
     err = example_store_node_info(uuid, unicast_addr, element_num, net_idx,
                                   fast_prov_server.app_idx, LED_OFF);
@@ -295,12 +294,13 @@ static void provisioner_prov_complete(int node_idx, const uint8_t uuid[16], uint
             ESP_LOGE(TAG, "%s: Failed to store node address 0x%04x", __func__, unicast_addr);
             return;
         }
-        if (fast_prov_server.node_addr_cnt <= fast_prov_server.max_node_num) {
-            if (bt_mesh_atomic_test_and_clear_bit(fast_prov_server.srv_flags, SEND_ALL_NODE_ADDR_START)) {
-                k_delayed_work_cancel(&fast_prov_server.send_all_node_addr_timer);
+        if (fast_prov_server.node_addr_cnt != FAST_PROV_NODE_COUNT_MIN &&
+            fast_prov_server.node_addr_cnt <= fast_prov_server.max_node_num) {
+            if (bt_mesh_atomic_test_and_clear_bit(fast_prov_server.srv_flags, GATT_PROXY_ENABLE_START)) {
+                k_delayed_work_cancel(&fast_prov_server.gatt_proxy_enable_timer);
             }
-            if (!bt_mesh_atomic_test_and_set_bit(fast_prov_server.srv_flags, SEND_ALL_NODE_ADDR_START)) {
-                k_delayed_work_submit(&fast_prov_server.send_all_node_addr_timer, SEND_ALL_NODE_ADDR_TIMEOUT);
+            if (!bt_mesh_atomic_test_and_set_bit(fast_prov_server.srv_flags, GATT_PROXY_ENABLE_START)) {
+                k_delayed_work_submit(&fast_prov_server.gatt_proxy_enable_timer, GATT_PROXY_ENABLE_TIMEOUT);
             }
         }
     } else {
@@ -503,7 +503,9 @@ static void example_ble_mesh_custom_model_cb(esp_ble_mesh_model_cb_event_t event
         case ESP_BLE_MESH_VND_MODEL_OP_FAST_PROV_INFO_SET:
         case ESP_BLE_MESH_VND_MODEL_OP_FAST_PROV_NET_KEY_ADD:
         case ESP_BLE_MESH_VND_MODEL_OP_FAST_PROV_NODE_ADDR:
-        case ESP_BLE_MESH_VND_MODEL_OP_FAST_PROV_NODE_ADDR_GET: {
+        case ESP_BLE_MESH_VND_MODEL_OP_FAST_PROV_NODE_ADDR_GET:
+        case ESP_BLE_MESH_VND_MODEL_OP_FAST_PROV_NODE_GROUP_ADD:
+        case ESP_BLE_MESH_VND_MODEL_OP_FAST_PROV_NODE_GROUP_DELETE: {
             ESP_LOGI(TAG, "%s: Fast prov server receives msg, opcode 0x%04x", __func__, opcode);
             struct net_buf_simple buf = {
                 .len = param->model_operation.length,

@@ -41,8 +41,6 @@ void board_prov_complete(void);
 
 void board_led_operation(uint8_t pin, uint8_t onoff);
 
-esp_err_t led_action_task_post(struct _led_state *msg, uint32_t timeout);
-
 esp_err_t board_init(void);
 
 #endif

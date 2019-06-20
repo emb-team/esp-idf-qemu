@@ -55,7 +55,7 @@ typedef struct {
     uint8_t  state;             /* Fast prov state -> 0: idle, 1: pend, 2: active */
 
     struct k_delayed_work disable_fast_prov_timer;  /* Used to disable fast provisioning */
-    struct k_delayed_work send_all_node_addr_timer; /* Used to send all node addresses to top provisioner(e.g. phone) */
+    struct k_delayed_work gatt_proxy_enable_timer;  /* Used to Mesh GATT Proxy functionality */
 } __attribute__((packed)) example_fast_prov_server_t;
 ```
 
@@ -70,7 +70,7 @@ In the struct, there are three variables that are related to roles and states, w
 | ---------------------|------------------------- |
 | `primary_role`      | Provisioner identity |
 | `state`      | Fast provisioner state (0: idle, 1: pend, 2: active) |
-| `srv_flags`  | Flags (`DISABLE_FAST_PROV_START`,`SEND_ALL_NODE_ADDR_START`,`RELAY_PROXY_DISABLED`,`SRV_MAX_FLAGS`) |
+| `srv_flags`  | Flags (`DISABLE_FAST_PROV_START`,`GATT_PROXY_ENABLE_START`,`RELAY_PROXY_DISABLED`,`SRV_MAX_FLAGS`) |
 
 Among which, there are four roles in this demo (`primary_role`):
 
@@ -120,7 +120,7 @@ The node's cache data, which are described in the following table, is sent by th
 
 There are two timers in this demo, which are:
 
-1. `send_all_node_addr_timer` is used to collect the addresses of all nodes.
+1. `gatt_proxy_enable_timer` is used to enable Mesh GATT Proxy functionality.
 	* The timer starts or resets and starts when a Temporary Provisioner provisions an unprovisioned device.
 	* The Temporary Provisioner will send a message (Address information) to the Primary Provisioner.
 2. `disable_fast_prov_timer` is used to disable the provisioning capabilities.
@@ -131,7 +131,7 @@ The variables that are related to these two timers are described below:
 | Variable Name        |Description               |
 | ----------------------|------------------------- |
 | `disable_fast_prov_timer`       |Used to disable fast provisioning|
-| `send_all_node_addr_timer`      |Used to send all node addresses to top provisioner|
+| `gatt_proxy_enable_timer`       |Used to enable Mesh GATT Proxy functionality|
 
 ### 2.2  Model Definition
 

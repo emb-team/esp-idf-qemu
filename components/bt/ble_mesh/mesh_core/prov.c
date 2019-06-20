@@ -136,6 +136,7 @@ struct prov_link {
 
 #if defined(CONFIG_BLE_MESH_PB_ADV)
     u32_t id;                /* Link ID */
+    u8_t  tx_pdu_type;       /* The previously transmitted Provisioning PDU type */
 
     struct {
         u8_t  id;        /* Transaction ID */
@@ -171,12 +172,14 @@ struct prov_rx {
     u8_t  gpc;
 };
 
-#define RETRANSMIT_TIMEOUT   K_MSEC(500)
 #define BUF_TIMEOUT          K_MSEC(400)
+
 #if defined(CONFIG_BLE_MESH_FAST_PROV)
+#define RETRANSMIT_TIMEOUT   K_MSEC(360)
 #define TRANSACTION_TIMEOUT  K_SECONDS(3)
 #define PROVISION_TIMEOUT    K_SECONDS(6)
 #else
+#define RETRANSMIT_TIMEOUT   K_MSEC(500)
 #define TRANSACTION_TIMEOUT  K_SECONDS(30)
 #define PROVISION_TIMEOUT    K_SECONDS(60)
 #endif /* CONFIG_BLE_MESH_FAST_PROV */
@@ -412,7 +415,7 @@ static int prov_send_adv(struct net_buf_simple *msg)
     struct net_buf *start, *buf;
     u8_t seg_len, seg_id;
     u8_t xact_id;
-    u8_t type;
+    s32_t timeout = PROVISION_TIMEOUT;
 
     BT_DBG("%s, len %u: %s", __func__, msg->len, bt_hex(msg->data, msg->len));
 
@@ -432,8 +435,8 @@ static int prov_send_adv(struct net_buf_simple *msg)
     net_buf_add_u8(start, bt_mesh_fcs_calc(msg->data, msg->len));
 
     link.tx.buf[0] = start;
-    /* Change by Espressif, get message type */
-    type = msg->data[0];
+    /* Changed by Espressif, get message type */
+    link.tx_pdu_type = msg->data[0];
 
     seg_len = MIN(msg->len, START_PAYLOAD_MAX);
     BT_DBG("seg 0 len %u: %s", seg_len, bt_hex(msg->data, seg_len));
@@ -476,10 +479,13 @@ static int prov_send_adv(struct net_buf_simple *msg)
     if (bt_mesh_atomic_test_and_clear_bit(link.flags, TIMEOUT_START)) {
         k_delayed_work_cancel(&link.timeout);
     }
-    if (type != PROV_COMPLETE && type != PROV_FAILED) {
-        if (!bt_mesh_atomic_test_and_set_bit(link.flags, TIMEOUT_START)) {
-            k_delayed_work_submit(&link.timeout, PROVISION_TIMEOUT);
-        }
+#if defined(CONFIG_BLE_MESH_FAST_PROV)
+    if (link.tx_pdu_type >= PROV_COMPLETE) {
+        timeout = K_SECONDS(60);
+    }
+#endif
+    if (!bt_mesh_atomic_test_and_set_bit(link.flags, TIMEOUT_START)) {
+        k_delayed_work_submit(&link.timeout, timeout);
     }
 
     return 0;
@@ -1243,6 +1249,7 @@ static void prov_timeout(struct k_work *work)
 #if defined(CONFIG_BLE_MESH_PB_ADV)
 static void prov_retransmit(struct k_work *work)
 {
+    s64_t timeout = TRANSACTION_TIMEOUT;
     int i;
 
     BT_DBG("%s", __func__);
@@ -1252,8 +1259,14 @@ static void prov_retransmit(struct k_work *work)
         return;
     }
 
-    if (k_uptime_get() - link.tx.start > TRANSACTION_TIMEOUT) {
-        BT_WARN("Giving up transaction");
+#if defined(CONFIG_BLE_MESH_FAST_PROV)
+    /* When Provisioning Failed PDU is sent, 3s may be used here. */
+    if (link.tx_pdu_type >= PROV_COMPLETE) {
+        timeout = K_SECONDS(30);
+    }
+#endif
+    if (k_uptime_get() - link.tx.start > timeout) {
+        BT_WARN("Node timeout, giving up transaction");
         reset_link();
         return;
     }
@@ -1290,7 +1303,14 @@ static void link_open(struct prov_rx *rx, struct net_buf_simple *buf)
     }
 
     if (bt_mesh_atomic_test_bit(link.flags, LINK_ACTIVE)) {
-        BT_WARN("Ignoring bearer open: link already active");
+        /* Send another link ack if the provisioner missed the last */
+        if (link.id == rx->link_id && link.expect == PROV_INVITE) {
+            BT_DBG("Resending link ack");
+            bearer_ctl_send(LINK_ACK, NULL, 0);
+        } else {
+            BT_WARN("Ignoring bearer open: link already active");
+        }
+
         return;
     }
 
@@ -1495,7 +1515,7 @@ static void gen_prov_start(struct prov_rx *rx, struct net_buf_simple *buf)
     if (link.rx.buf->len > link.rx.buf->size) {
         BT_ERR("%s, Too large provisioning PDU (%u bytes)",
                 __func__, link.rx.buf->len);
-        close_link(PROV_ERR_NVAL_FMT, CLOSE_REASON_FAILED);
+        // close_link(PROV_ERR_NVAL_FMT, CLOSE_REASON_FAILED);
         return;
     }
 

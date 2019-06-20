@@ -28,7 +28,7 @@
 #define TAG "FAST_PROV_SERVER"
 
 /* Array used to store all node addresses */
-static uint16_t all_node_addr[100];
+static uint16_t all_node_addr[120];
 static uint16_t all_node_addr_cnt;
 
 esp_err_t example_store_remote_node_address(uint16_t node_addr)
@@ -57,6 +57,20 @@ esp_err_t example_store_remote_node_address(uint16_t node_addr)
     return ESP_FAIL;
 }
 
+esp_ble_mesh_cfg_srv_t *get_cfg_srv_user_data(void)
+{
+    esp_ble_mesh_model_t *model = NULL;
+
+    model = example_find_model(esp_ble_mesh_get_primary_element_address(),
+                               ESP_BLE_MESH_MODEL_ID_CONFIG_SRV, CID_NVAL);
+    if (!model) {
+        ESP_LOGE(TAG, "%s: Failed to get config server model", __func__);
+        return NULL;
+    }
+
+    return (esp_ble_mesh_cfg_srv_t *)(model->user_data);
+}
+
 /* Timeout handler for disable_fast_prov_timer */
 static void disable_fast_prov_cb(struct k_work *work)
 {
@@ -74,41 +88,20 @@ static void disable_fast_prov_cb(struct k_work *work)
     }
 }
 
-static esp_ble_mesh_cfg_srv_t *get_cfg_srv_user_data(void)
+/* Timeout handler for gatt_proxy_enable_timer */
+static void enable_gatt_proxy_cb(struct k_work *work)
 {
-    esp_ble_mesh_model_t *model = NULL;
+    example_fast_prov_server_t *srv = NULL;
 
-    model = example_find_model(esp_ble_mesh_get_primary_element_address(),
-                               ESP_BLE_MESH_MODEL_ID_CONFIG_SRV, CID_NVAL);
-    if (!model) {
-        ESP_LOGE(TAG, "%s: Failed to get config server model", __func__);
-        return NULL;
-    }
-
-    return (esp_ble_mesh_cfg_srv_t *)(model->user_data);
-}
-
-/* Timeout handler for send_all_node_addr_timer */
-static void example_send_all_node_addr(struct k_work *work)
-{
-    example_fast_prov_server_t *fast_prov_srv_data = NULL;
-    esp_ble_mesh_cfg_srv_t *cfg_srv_data = NULL;
-
-    fast_prov_srv_data = CONTAINER_OF(work, example_fast_prov_server_t, send_all_node_addr_timer.work);
-    if (!fast_prov_srv_data) {
+    srv = CONTAINER_OF(work, example_fast_prov_server_t, gatt_proxy_enable_timer.work);
+    if (!srv) {
         ESP_LOGE(TAG, "%s: Failed to get fast prov server model user_data", __func__);
         return;
     }
 
-    cfg_srv_data = get_cfg_srv_user_data();
-    if (!cfg_srv_data) {
-        ESP_LOGE(TAG, "%s: Failed to get config server model user_data", __func__);
-        return;
-    }
-
-    if (bt_mesh_atomic_test_and_clear_bit(fast_prov_srv_data->srv_flags, RELAY_PROXY_DISABLED)) {
+    if (bt_mesh_atomic_test_and_clear_bit(srv->srv_flags, RELAY_PROXY_DISABLED)) {
         ESP_LOGI(TAG, "%s: Enable BLE Mesh Relay & GATT Proxy", __func__);
-        cfg_srv_data->relay = ESP_BLE_MESH_RELAY_ENABLED;
+        /* For Primary Provisioner, Relay will not be enabled */
         esp_ble_mesh_proxy_gatt_enable();
         esp_ble_mesh_proxy_identity_enable();
     }
@@ -125,22 +118,18 @@ static void example_free_set_info(example_fast_prov_server_t *srv)
 }
 
 esp_err_t example_fast_prov_server_recv_msg(esp_ble_mesh_model_t *model,
-        esp_ble_mesh_msg_ctx_t *ctx,
-        struct net_buf_simple *buf)
+        esp_ble_mesh_msg_ctx_t *ctx, struct net_buf_simple *buf)
 {
     example_fast_prov_server_t *srv = NULL;
     struct net_buf_simple *msg = NULL;
-    uint32_t opcode;
+    uint32_t opcode = 0;
     esp_err_t err;
 
-    if (!model || !ctx || !buf) {
+    if (!model || !model->user_data || !ctx || !buf) {
         return ESP_ERR_INVALID_ARG;
     }
 
     srv = (example_fast_prov_server_t *)model->user_data;
-    if (!srv) {
-        return ESP_FAIL;
-    }
 
     ESP_LOG_BUFFER_HEX("fast prov server recv", buf->data, buf->len);
 
@@ -280,6 +269,10 @@ esp_err_t example_fast_prov_server_recv_msg(esp_ble_mesh_model_t *model,
             return ESP_FAIL;
         }
 
+        if (unicast_max < unicast_min + srv->max_node_num - 1) {
+            srv->max_node_num = unicast_max - unicast_min + 1;
+        }
+
         srv->set_info->set_succeed = false;
         srv->set_info->node_addr_cnt = node_addr_cnt;
         srv->set_info->unicast_min = unicast_min;
@@ -294,7 +287,7 @@ esp_err_t example_fast_prov_server_recv_msg(esp_ble_mesh_model_t *model,
 
         esp_ble_mesh_fast_prov_info_t info_set = {
             .unicast_min = unicast_min,
-            .unicast_max = unicast_max,
+            .unicast_max = unicast_min + srv->max_node_num - 1,
             .flags = flags,
             .iv_index = iv_index,
             .net_idx = net_idx,
@@ -340,14 +333,13 @@ esp_err_t example_fast_prov_server_recv_msg(esp_ble_mesh_model_t *model,
             return ESP_FAIL;
         }
 
-        if (bt_mesh_atomic_test_and_clear_bit(srv->srv_flags, SEND_ALL_NODE_ADDR_START)) {
-            k_delayed_work_cancel(&srv->send_all_node_addr_timer);
+        if (bt_mesh_atomic_test_and_clear_bit(srv->srv_flags, GATT_PROXY_ENABLE_START)) {
+            k_delayed_work_cancel(&srv->gatt_proxy_enable_timer);
         }
 
-        uint16_t length = buf->len;
-        for (int i = 0; i < (length >> 1); i++) {
+        for (; buf->len; ) {
             uint16_t node_addr = net_buf_simple_pull_le16(buf);
-            ESP_LOGI(TAG, "node address %d: 0x%04x", i, node_addr);
+            ESP_LOGI(TAG, "Node address: 0x%04x", node_addr);
             err = example_store_remote_node_address(node_addr);
             if (err != ESP_OK) {
                 ESP_LOGE(TAG, "%s: Failed to store node address 0x%04x", __func__, node_addr);
@@ -374,6 +366,46 @@ esp_err_t example_fast_prov_server_recv_msg(esp_ble_mesh_model_t *model,
         opcode = ESP_BLE_MESH_VND_MODEL_OP_FAST_PROV_NODE_ADDR_STATUS;
         break;
     }
+    case ESP_BLE_MESH_VND_MODEL_OP_FAST_PROV_NODE_GROUP_ADD: {
+        uint16_t own_addr = esp_ble_mesh_get_primary_element_address();
+        uint16_t group_addr = net_buf_simple_pull_le16(buf);
+        ESP_LOGI(TAG, "%s, group address 0x%04x", __func__, group_addr);
+        if (!ESP_BLE_MESH_ADDR_IS_GROUP(group_addr)) {
+            return ESP_FAIL;
+        }
+        for (; buf->len; ) {
+            uint16_t dst = net_buf_simple_pull_le16(buf);
+            ESP_LOGI(TAG, "%s, dst 0x%04x, own address 0x%04x", __func__, dst, own_addr);
+            if (dst == own_addr) {
+                err = example_add_fast_prov_group_address(ESP_BLE_MESH_MODEL_ID_GEN_ONOFF_SRV, group_addr);
+                if (err != ESP_OK) {
+                    ESP_LOGE(TAG, "%s: Failed to add group address 0x%04x", __func__, group_addr);
+                }
+                return err;
+            }
+        }
+        return ESP_OK;
+    }
+    case ESP_BLE_MESH_VND_MODEL_OP_FAST_PROV_NODE_GROUP_DELETE: {
+        uint16_t own_addr = esp_ble_mesh_get_primary_element_address();
+        uint16_t group_addr = net_buf_simple_pull_le16(buf);
+        ESP_LOGI(TAG, "%s, group address 0x%04x", __func__, group_addr);
+        if (!ESP_BLE_MESH_ADDR_IS_GROUP(group_addr)) {
+            return ESP_FAIL;
+        }
+        for (; buf->len; ) {
+            uint16_t dst = net_buf_simple_pull_le16(buf);
+            ESP_LOGI(TAG, "%s, dst 0x%04x, own address 0x%04x", __func__, dst, own_addr);
+            if (dst == own_addr) {
+                err = example_delete_fast_prov_group_address(ESP_BLE_MESH_MODEL_ID_GEN_ONOFF_SRV, group_addr);
+                if (err != ESP_OK) {
+                    ESP_LOGE(TAG, "%s: Failed to delete group address 0x%04x", __func__, group_addr);
+                }
+                return err;
+            }
+        }
+        return ESP_OK;
+    }
     default:
         ESP_LOGW(TAG, "%s: Not a Fast Prov Client message opcode", __func__);
         return ESP_FAIL;
@@ -396,12 +428,12 @@ esp_err_t example_handle_fast_prov_info_set_comp_evt(esp_ble_mesh_model_t *model
     struct net_buf_simple *msg = NULL;
     esp_err_t err;
 
-    if (!model) {
+    if (!model || !model->user_data) {
         return ESP_ERR_INVALID_ARG;
     }
 
     srv = (example_fast_prov_server_t *)model->user_data;
-    if (!srv || !srv->set_info) {
+    if (!srv->set_info) {
         return ESP_FAIL;
     }
 
@@ -416,9 +448,6 @@ esp_err_t example_handle_fast_prov_info_set_comp_evt(esp_ble_mesh_model_t *model
     }
 
     /* Update Fast Prov Server Model user_data */
-    if (srv->set_info->unicast_max < srv->set_info->unicast_min + srv->max_node_num - 1) {
-        srv->max_node_num = srv->set_info->unicast_max - srv->set_info->unicast_min + 1;
-    }
     srv->unicast_min = srv->set_info->unicast_min + srv->max_node_num;
     srv->unicast_max = srv->set_info->unicast_max;
     srv->unicast_cur = srv->set_info->unicast_min + srv->max_node_num;
@@ -476,29 +505,48 @@ send:
 
 esp_err_t example_handle_fast_prov_action_set_comp_evt(esp_ble_mesh_model_t *model, uint8_t status_action)
 {
-    example_fast_prov_server_t *srv = model->user_data;
+    example_fast_prov_server_t *srv = NULL;
     struct net_buf_simple *msg = NULL;
     uint32_t opcode;
     esp_err_t err;
+
+    if (!model || !model->user_data) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    srv = (example_fast_prov_server_t *)model->user_data;
 
     msg = bt_mesh_alloc_buf(9);
     net_buf_simple_init(msg, 0);
 
     switch (srv->state) {
-    case STATE_IDLE: {  /* fast prov info set (enter) */
+    case STATE_IDLE: { /* fast prov info set (enter) */
         const uint8_t zero[6] = {0};
         net_buf_simple_add_le16(msg, 0x7f);
         net_buf_simple_add_mem(msg, zero, 6);
         net_buf_simple_add_u8(msg, status_action);
         opcode = ESP_BLE_MESH_VND_MODEL_OP_FAST_PROV_INFO_STATUS;
+        /**
+         * Disable relay should not have a impact on Mesh Proxy PDU, and
+         * we can also move "disabling relay" in the event of "disabling
+         * gatt proxy" here.
+         */
+        if (srv->node_addr_cnt == FAST_PROV_NODE_COUNT_MIN) {
+            if (bt_mesh_atomic_test_and_clear_bit(srv->srv_flags, GATT_PROXY_ENABLE_START)) {
+                k_delayed_work_cancel(&srv->gatt_proxy_enable_timer);
+            }
+            if (!bt_mesh_atomic_test_and_set_bit(srv->srv_flags, GATT_PROXY_ENABLE_START)) {
+                k_delayed_work_submit(&srv->gatt_proxy_enable_timer, K_SECONDS(3));
+            }
+        }
         break;
     }
-    case STATE_ACTIVE:  /* fast prov info set (suspend/exit) */
-    /* Currently we only support suspend/exit fast prov after
-     * Generic OnOff Set/Set Unack is received. So no fast prov
-     * status message will be sent.
+    case STATE_ACTIVE: /* fast prov info set (suspend/exit) */
+    /* Currently we only support suspend/exit fast prov after Generic
+     * OnOff Set/Set Unack is received. So no fast prov status message
+     * will be sent.
      */
-    case STATE_PEND:    /* fast prov net_key add */
+    case STATE_PEND: /* fast prov net_key add */
     /* In this case, we should send fast prov net_key status */
     default:
         bt_mesh_free_buf(msg);
@@ -529,18 +577,17 @@ esp_err_t example_handle_fast_prov_action_set_comp_evt(esp_ble_mesh_model_t *mod
 }
 
 esp_err_t example_handle_fast_prov_status_send_comp_evt(int err_code, uint32_t opcode,
-        esp_ble_mesh_model_t *model,
-        esp_ble_mesh_msg_ctx_t *ctx)
+        esp_ble_mesh_model_t *model, esp_ble_mesh_msg_ctx_t *ctx)
 {
-    example_fast_prov_server_t *srv = model->user_data;
-    esp_ble_mesh_cfg_srv_t *cfg_srv_data = NULL;
+    example_fast_prov_server_t *srv = NULL;
+
+    if (!model || !model->user_data) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    srv = (example_fast_prov_server_t *)model->user_data;
 
     ESP_LOGI(TAG, "%s: opcode 0x%06x", __func__, opcode);
-
-    cfg_srv_data = get_cfg_srv_user_data();
-    if (!cfg_srv_data) {
-        return ESP_FAIL;
-    }
 
     switch (opcode) {
     case ESP_BLE_MESH_VND_MODEL_OP_FAST_PROV_INFO_STATUS:
@@ -558,11 +605,8 @@ esp_err_t example_handle_fast_prov_status_send_comp_evt(int err_code, uint32_t o
     case ESP_BLE_MESH_VND_MODEL_OP_FAST_PROV_NET_KEY_STATUS:
         break;
     case ESP_BLE_MESH_VND_MODEL_OP_FAST_PROV_NODE_ADDR_ACK:
-        /* Minus 1 which is provisioned by the top device */
-        if (all_node_addr_cnt < srv->node_addr_cnt - 1) {
-            if (!bt_mesh_atomic_test_and_set_bit(srv->srv_flags, SEND_ALL_NODE_ADDR_START)) {
-                k_delayed_work_submit(&srv->send_all_node_addr_timer, SEND_ALL_NODE_ADDR_TIMEOUT);
-            }
+        if (!bt_mesh_atomic_test_and_set_bit(srv->srv_flags, GATT_PROXY_ENABLE_START)) {
+            k_delayed_work_submit(&srv->gatt_proxy_enable_timer, GATT_PROXY_ENABLE_TIMEOUT);
         }
         break;
     case ESP_BLE_MESH_VND_MODEL_OP_FAST_PROV_NODE_ADDR_STATUS:
@@ -578,19 +622,15 @@ esp_err_t example_fast_prov_server_init(esp_ble_mesh_model_t *model)
 {
     example_fast_prov_server_t *srv = NULL;
 
-    if (!model) {
+    if (!model || !model->user_data) {
         return ESP_ERR_INVALID_ARG;
     }
 
     srv = (example_fast_prov_server_t *)model->user_data;
-    if (!srv) {
-        return ESP_FAIL;
-    }
-
     srv->model = model;
 
     k_delayed_work_init(&srv->disable_fast_prov_timer, disable_fast_prov_cb);
-    k_delayed_work_init(&srv->send_all_node_addr_timer, example_send_all_node_addr);
+    k_delayed_work_init(&srv->gatt_proxy_enable_timer, enable_gatt_proxy_cb);
 
     return ESP_OK;
 }

@@ -1335,8 +1335,8 @@ if BLE_MESH
         if BLE_MESH_PB_ADV
             config BLE_MESH_PBA_SAME_TIME
                 int "Maximum number of PB-ADV running at the same time by provisioner"
-                default 10
-                range 1 30
+                default 2
+                range 1 10
                 help
                     This option specifies how many devices can be provisioned at the same
                     time using PB-ADV.
@@ -1345,7 +1345,7 @@ if BLE_MESH
         if BLE_MESH_PB_GATT
             config BLE_MESH_PBG_SAME_TIME
                 int "Maximum number of PB-GATT running at the same time by provisioner"
-                default 4
+                default 1
                 range 1 5
                 help
                     This option specifies how many devices can be provisioned at the same
@@ -1447,7 +1447,7 @@ if BLE_MESH
         config BLE_MESH_STORE_TIMEOUT
             int "Delay (in seconds) before storing anything persistently"
             range 0 1000000
-            default 2
+            default 0
             help
                 This value defines in seconds how soon any pending changes are actually
                 written into persistent storage (flash) after a change occurs.
@@ -1486,21 +1486,21 @@ if BLE_MESH
 
     config BLE_MESH_SUBNET_COUNT
         int "Maximum number of mesh subnets per network"
-        default 1
+        default 3
         range 1 4096
         help
             This option specifies how many subnets a Mesh network can have at the same time.
 
     config BLE_MESH_APP_KEY_COUNT
         int "Maximum number of application keys per network"
-        default 1
+        default 3
         range 1 4096
         help
             This option specifies how many application keys the device can store per network.
 
     config BLE_MESH_MODEL_KEY_COUNT
         int "Maximum number of application keys per model"
-        default 1
+        default 3
         range 1 4096
         help
             This option specifies the maximum number of application keys to which each model
@@ -1508,7 +1508,7 @@ if BLE_MESH
 
     config BLE_MESH_MODEL_GROUP_COUNT
         int "Maximum number of group address subscriptions per model"
-        default 1
+        default 3
         range 1 4096
         help
             This option specifies the maximum number of addresses to which each model can
@@ -1516,7 +1516,7 @@ if BLE_MESH
 
     config BLE_MESH_LABEL_COUNT
         int "Maximum number of Label UUIDs used for Virtual Addresses"
-        default 1
+        default 3
         range 0 4096
         help
             This option specifies how many Label UUIDs can be stored.

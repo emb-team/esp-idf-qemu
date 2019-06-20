@@ -289,6 +289,40 @@ esp_err_t example_add_fast_prov_group_address(uint16_t model_id, uint16_t group_
     return ESP_OK;
 }
 
+esp_err_t example_delete_fast_prov_group_address(uint16_t model_id, uint16_t group_addr)
+{
+    const esp_ble_mesh_comp_t *comp = NULL;
+    esp_ble_mesh_elem_t *element = NULL;
+    esp_ble_mesh_model_t *model = NULL;
+    int i, j;
+
+    if (!ESP_BLE_MESH_ADDR_IS_GROUP(group_addr)) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    comp = esp_ble_mesh_get_composition_data();
+    if (comp == NULL) {
+        return ESP_FAIL;
+    }
+
+    for (i = 0; i < comp->element_count; i++) {
+        element = &comp->elements[i];
+
+        model = esp_ble_mesh_find_sig_model(element, model_id);
+        if (model == NULL) {
+            continue;
+        }
+        for (j = 0; j < ARRAY_SIZE(model->groups); j++) {
+            if (model->groups[j] == group_addr) {
+                model->groups[j] = ESP_BLE_MESH_ADDR_UNASSIGNED;
+                break;
+            }
+        }
+    }
+
+    return ESP_OK;
+}
+
 esp_err_t example_send_config_appkey_add(esp_ble_mesh_model_t *model,
         example_msg_common_info_t *info,
         esp_ble_mesh_cfg_app_key_add_t *add_key)

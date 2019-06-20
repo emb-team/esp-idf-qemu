@@ -113,18 +113,18 @@ void k_delayed_work_init(struct k_delayed_work *work, k_work_handler_t handler)
     if (!hash_map_has_key(bm_alarm_hash_map, (void *)work)) {
         alarm = osi_alarm_new("bt_mesh", bt_mesh_alarm_cb, (void *)work, 0);
         if (alarm == NULL) {
-            LOG_ERROR("%s, Unable to create alarm", __func__);
+            BT_ERR("%s, Unable to create alarm", __func__);
             return;
         }
         if (!hash_map_set(bm_alarm_hash_map, work, (void *)alarm)) {
-            LOG_ERROR("%s Unable to add the timer to hash map.", __func__);
+            BT_ERR("%s Unable to add the timer to hash map.", __func__);
         }
     }
     osi_mutex_unlock(&bm_alarm_lock);
 
     alarm = hash_map_get(bm_alarm_hash_map, work);
     if (alarm == NULL) {
-        LOG_WARN("%s, Unable to find expected alarm in hash map", __func__);
+        BT_WARN("%s, Unable to find expected alarm in hash map", __func__);
         return;
     }
 
@@ -140,7 +140,7 @@ int k_delayed_work_submit(struct k_delayed_work *work,
 
     osi_alarm_t *alarm = hash_map_get(bm_alarm_hash_map, (void *)work);
     if (alarm == NULL) {
-        LOG_WARN("%s, Unable to find expected alarm in hash map", __func__);
+        BT_WARN("%s, Unable to find expected alarm in hash map", __func__);
         return -EINVAL;
     }
 
@@ -156,7 +156,7 @@ int k_delayed_work_cancel(struct k_delayed_work *work)
 
     osi_alarm_t *alarm = hash_map_get(bm_alarm_hash_map, (void *)work);
     if (alarm == NULL) {
-        LOG_WARN("%s, Unable to find expected alarm in hash map", __func__);
+        BT_WARN("%s, Unable to find expected alarm in hash map", __func__);
         return -EINVAL;
     }
 
@@ -171,7 +171,7 @@ int k_delayed_work_free(struct k_delayed_work *work)
 
     osi_alarm_t *alarm = hash_map_get(bm_alarm_hash_map, work);
     if (alarm == NULL) {
-        LOG_WARN("%s Unable to find expected alarm in hash map", __func__);
+        BT_WARN("%s Unable to find expected alarm in hash map", __func__);
         return -EINVAL;
     }
 
@@ -185,7 +185,7 @@ s32_t k_delayed_work_remaining_get(struct k_delayed_work *work)
 
     osi_alarm_t *alarm = hash_map_get(bm_alarm_hash_map, (void *)work);
     if (alarm == NULL) {
-        LOG_WARN("%s Unable to find expected alarm in hash map", __func__);
+        BT_WARN("%s Unable to find expected alarm in hash map", __func__);
         return 0;
     }
 

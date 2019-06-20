@@ -34,6 +34,8 @@ esp_err_t example_handle_config_app_key_add_evt(uint16_t app_idx);
 
 esp_err_t example_add_fast_prov_group_address(uint16_t model_id, uint16_t group_addr);
 
+esp_err_t example_delete_fast_prov_group_address(uint16_t model_id, uint16_t group_addr);
+
 esp_err_t example_send_config_appkey_add(esp_ble_mesh_model_t *model,
         example_msg_common_info_t *info,
         esp_ble_mesh_cfg_app_key_add_t *add_key);

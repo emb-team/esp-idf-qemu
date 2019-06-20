@@ -18,11 +18,13 @@
 #include "esp_fast_prov_common.h"
 
 #define DISABLE_FAST_PROV_TIMEOUT       K_SECONDS(10)
-#define SEND_ALL_NODE_ADDR_TIMEOUT      K_SECONDS(10)
+#define GATT_PROXY_ENABLE_TIMEOUT       K_SECONDS(10)
+
+#define FAST_PROV_NODE_COUNT_MIN        0x01
 
 enum {
     DISABLE_FAST_PROV_START,    /* Flag indicates the timer used to disable fast provisioning has been started */
-    SEND_ALL_NODE_ADDR_START,   /* Flag indicates the timer used to send all node address has been started */
+    GATT_PROXY_ENABLE_START,    /* Flag indicates the timer used to enable Mesh GATT Proxy has been started */
     RELAY_PROXY_DISABLED,       /* Flag indicates if relay & proxy_adv are enabled or disabled */
     SRV_MAX_FLAGS,
 };
@@ -79,14 +81,13 @@ typedef struct {
     uint8_t  state;             /* Fast prov state -> 0: idle, 1: pend, 2: active */
 
     struct k_delayed_work disable_fast_prov_timer;  /* Used to disable fast provisioning */
-    struct k_delayed_work send_all_node_addr_timer; /* Used to send all node addresses to top provisioner(e.g. phone) */
+    struct k_delayed_work gatt_proxy_enable_timer;  /* Used to enable Mesh GATT Proxy functionality */
 } __attribute__((packed)) example_fast_prov_server_t;
 
 esp_err_t example_store_remote_node_address(uint16_t node_addr);
 
 esp_err_t example_fast_prov_server_recv_msg(esp_ble_mesh_model_t *model,
-        esp_ble_mesh_msg_ctx_t *ctx,
-        struct net_buf_simple *buf);
+        esp_ble_mesh_msg_ctx_t *ctx, struct net_buf_simple *buf);
 
 esp_err_t example_handle_fast_prov_info_set_comp_evt(esp_ble_mesh_model_t *model, uint8_t status_unicast,
         uint8_t status_net_idx, uint8_t status_match);
@@ -94,8 +95,7 @@ esp_err_t example_handle_fast_prov_info_set_comp_evt(esp_ble_mesh_model_t *model
 esp_err_t example_handle_fast_prov_action_set_comp_evt(esp_ble_mesh_model_t *model, uint8_t status_action);
 
 esp_err_t example_handle_fast_prov_status_send_comp_evt(int err_code, uint32_t opcode,
-        esp_ble_mesh_model_t *model,
-        esp_ble_mesh_msg_ctx_t *ctx);
+        esp_ble_mesh_model_t *model, esp_ble_mesh_msg_ctx_t *ctx);
 
 esp_err_t example_fast_prov_server_init(esp_ble_mesh_model_t *model);
 
