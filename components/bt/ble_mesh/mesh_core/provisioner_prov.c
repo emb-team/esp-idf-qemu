@@ -3121,10 +3121,11 @@ static bool is_unprov_dev_info_callback_to_app(bt_mesh_prov_bearer_t bearer,
     int index;
 
     if (prov_ctx.prov_after_match == false) {
+        u8_t adv_type = (bearer == BLE_MESH_PROV_ADV) ?
+                        BLE_MESH_ADV_NONCONN_IND : BLE_MESH_ADV_IND;
+
         if (provisioner_dev_find(addr, uuid, &index)) {
             BT_DBG("%s, Device is not in queue, notify to upper layer", __func__);
-            u8_t adv_type = (bearer == BLE_MESH_PROV_ADV) ?
-                            BLE_MESH_ADV_NONCONN_IND : BLE_MESH_ADV_IND;
             if (notify_unprov_adv_pkt_cb) {
                 notify_unprov_adv_pkt_cb(addr->val, addr->type, adv_type, uuid, oob_info, bearer);
             }
@@ -3134,6 +3135,9 @@ static bool is_unprov_dev_info_callback_to_app(bt_mesh_prov_bearer_t bearer,
         if (!(unprov_dev[index].bearer & bearer)) {
             BT_WARN("Device in queue not support PB-%s",
                 (bearer == BLE_MESH_PROV_ADV) ? "ADV" : "GATT");
+            if (notify_unprov_adv_pkt_cb) {
+                notify_unprov_adv_pkt_cb(addr->val, addr->type, adv_type, uuid, oob_info, bearer);
+            }
             return true;
         }
     }
