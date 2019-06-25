@@ -61,3 +61,7 @@
 [submodule "components/mqtt/esp-mqtt"]
 	path = components/mqtt/esp-mqtt
 	url = https://bitbucket.cloud.grohe.com/scm/~evgenii.zharkov/esp-mqtt.git
+
+[submodule "components/nimble/nimble"]
+	path = components/nimble/nimble
+	url = https://github.com/espressif/esp-nimble.git
