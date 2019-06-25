@@ -61,3 +61,7 @@
 [submodule "components/protobuf-c/protobuf-c"]
 	path = components/protobuf-c/protobuf-c
 	url = https://github.com/protobuf-c/protobuf-c
+
+[submodule "components/nimble/nimble"]
+	path = components/nimble/nimble
+	url = https://github.com/espressif/esp-nimble.git
