@@ -311,7 +311,7 @@ int bt_mesh_prov_set_oob_input_data(u8_t *val, u8_t link_idx, bool num_flag);
  *
  * @return Zero - success, otherwise - fail
  */
-// int bt_mesh_prov_set_oob_output_data(u8_t *num, u8_t size, bool num_flag, u8_t link_idx);
+int bt_mesh_prov_set_oob_output_data(const u8_t *num, u8_t size, bool num_flag, u8_t link_idx);
 
 /**
  * @brief This function is called to read unprovisioned device's oob public key.

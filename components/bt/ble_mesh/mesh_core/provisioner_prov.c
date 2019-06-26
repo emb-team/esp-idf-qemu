@@ -758,10 +758,10 @@ int bt_mesh_provisioner_add_unprov_dev(struct bt_mesh_unprov_dev_add *add_dev, u
         return err;
     } else if (err == 0) {
         if (!(add_dev->bearer & unprov_dev[i].bearer)) {
-            BT_WARN("%s, Add device with only bearer updated", __func__);
+            BT_WARN("Add device with only bearer updated");
             unprov_dev[i].bearer |= add_dev->bearer;
         } else {
-            BT_WARN("%s, Device already exists", __func__);
+            BT_WARN("Device already exists in queue");
         }
         goto start;
     }
@@ -1768,7 +1768,7 @@ static int prov_auth(u8_t method, u8_t action, u8_t size)
             str[size] = '\0';
 
             memcpy(link[i].auth, str, size);
-            memset(link[i].auth + size, 0, sizeof(link[i].auth) - size);
+            memset(link[i].auth + size, 0, PROV_AUTH_VAL_SIZE - size);
 
             return prov->prov_output_num(AUTH_METHOD_INPUT, input, str, size, i);
         } else {
@@ -1895,8 +1895,7 @@ int bt_mesh_prov_set_oob_input_data(u8_t *val, u8_t link_idx, bool num_flag)
     return 0;
 }
 
-#if 0
-int bt_mesh_prov_set_oob_output_data(u8_t *num, u8_t size, bool num_flag, u8_t link_idx)
+int bt_mesh_prov_set_oob_output_data(const u8_t *num, u8_t size, bool num_flag, u8_t link_idx)
 {
     /** This function should be called in the prov_output_num
      *  callback, after the data has been output by provisioner.
@@ -1926,7 +1925,6 @@ int bt_mesh_prov_set_oob_output_data(u8_t *num, u8_t size, bool num_flag, u8_t l
 
     return 0;
 }
-#endif
 
 int bt_mesh_prov_read_oob_pub_key(u8_t link_idx, u8_t pub_key_x[32], u8_t pub_key_y[32])
 {
