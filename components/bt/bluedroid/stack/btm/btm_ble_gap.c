@@ -3920,7 +3920,7 @@ tBTM_STATUS btm_ble_stop_adv(void)
 {
     tBTM_BLE_INQ_CB *p_cb = &btm_cb.ble_ctr_cb.inq_var;
     tBTM_STATUS rt = BTM_SUCCESS;
-    if (p_cb->adv_mode == BTM_BLE_ADV_ENABLE) {
+    // if (p_cb->adv_mode == BTM_BLE_ADV_ENABLE) {
         osi_mutex_lock(&adv_enable_lock, OSI_MUTEX_MAX_TIMEOUT);
         UINT8 temp_adv_mode = p_cb->adv_mode;
         BOOLEAN temp_fast_adv_on = p_cb->fast_adv_on;
@@ -3953,7 +3953,7 @@ tBTM_STATUS btm_ble_stop_adv(void)
             p_cb->adv_mode = temp_adv_mode;
         }
         osi_mutex_unlock(&adv_enable_lock);
-    }
+    // }
     return rt;
 }
 
