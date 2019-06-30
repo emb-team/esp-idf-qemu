@@ -6,8 +6,8 @@
 	path = components/esptool_py/esptool
 	url = https://github.com/espressif/esptool.git
 
-[submodule "components/bt/lib"]
-	path = components/bt/lib
+[submodule "components/bt/controller/lib"]
+	path = components/bt/controller/lib
 	url = https://github.com/espressif/esp32-bt-lib.git
 
 [submodule "components/micro-ecc/micro-ecc"]
@@ -62,6 +62,6 @@
 	path = components/protobuf-c/protobuf-c
 	url = https://github.com/protobuf-c/protobuf-c
 
-[submodule "components/nimble/nimble"]
-	path = components/nimble/nimble
+[submodule "components/bt/host/nimble/nimble"]
+	path = components/bt/host/nimble/nimble
 	url = https://github.com/espressif/esp-nimble.git
