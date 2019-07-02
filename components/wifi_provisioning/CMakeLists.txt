@@ -6,5 +6,11 @@ set(COMPONENT_SRCS  "src/wifi_config.c"
 
 set(COMPONENT_REQUIRES lwip)
 set(COMPONENT_PRIV_REQUIRES protobuf-c protocomm)
+if(CONFIG_BT_ENABLED)
+    if(CONFIG_BT_BLUEDROID_ENABLED OR CONFIG_BT_NIMBLE_ENABLED)
+        list(APPEND srcs
+            "src/scheme_ble.c")
+    endif()
+endif()
 
 register_component()

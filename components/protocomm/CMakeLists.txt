@@ -19,6 +19,12 @@ if(CONFIG_BT_ENABLED)
         list(APPEND COMPONENT_SRCS
             "src/simple_ble/simple_ble.c"
             "src/transports/protocomm_ble.c")
+        list(APPEND priv_include_dirs
+            src/simple_ble)
+    endif()
+    if(CONFIG_BT_NIMBLE_ENABLED)
+        list(APPEND srcs
+            "src/transports/protocomm_nimble.c")
     endif()
 endif()
 
