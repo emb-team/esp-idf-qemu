@@ -13,7 +13,7 @@
 
 static const char *TAG = "TRANSPORT_WS";
 
-#define DEFAULT_WS_BUFFER (1024)
+#define DEFAULT_WS_BUFFER (2048)
 #define WS_FIN            0x80
 #define WS_OPCODE_TEXT    0x01
 #define WS_OPCODE_BINARY  0x02
@@ -94,14 +94,13 @@ static int ws_connect(esp_transport_handle_t t, const char *host, int port, int 
     int len = snprintf(ws->buffer, DEFAULT_WS_BUFFER,
                          "GET %s HTTP/1.1\r\n"
                          "Connection: Upgrade\r\n"
-                         "Host: %s:%d\r\n"
+                         "Host: %s\r\n"
                          "Upgrade: websocket\r\n"
-                         "Sec-WebSocket-Version: 13\r\n"
-                         "Sec-WebSocket-Protocol: mqtt\r\n"
-                         "Sec-WebSocket-Key: %s\r\n"
-                         "User-Agent: ESP32 Websocket Client\r\n\r\n",
+                         "sec-websocket-version: 13\r\n"
+                         "sec-websocket-protocol: mqttv3.1\r\n"
+                         "sec-websocket-key: %s\r\n\r\n",
                          ws->path,
-                         host, port,
+                         host,
                          client_key);
     if (len <= 0 || len >= DEFAULT_WS_BUFFER) {
         ESP_LOGE(TAG, "Error in request generation, %d", len);
@@ -116,9 +115,9 @@ static int ws_connect(esp_transport_handle_t t, const char *host, int port, int 
         ESP_LOGE(TAG, "Error read response for Upgrade header %s", ws->buffer);
         return -1;
     }
-    char *server_key = get_http_header(ws->buffer, "Sec-WebSocket-Accept:");
+    char *server_key = get_http_header(ws->buffer, "sec-websocket-accept:");
     if (server_key == NULL) {
-        ESP_LOGE(TAG, "Sec-WebSocket-Accept not found");
+        ESP_LOGE(TAG, "sec-websocket-accept not found. Response: %s", ws->buffer);
         return -1;
     }
 
