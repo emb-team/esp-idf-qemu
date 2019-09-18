@@ -64,4 +64,4 @@
 
 [submodule "components/bt/host/nimble/nimble"]
 	path = components/bt/host/nimble/nimble
-	url = https://github.com/espressif/esp-nimble.git
+	url = https://bitbucket.cloud.grohe.com/scm/~evgenii.zharkov/esp-nimble.git
