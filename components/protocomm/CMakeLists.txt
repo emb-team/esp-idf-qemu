@@ -15,10 +15,16 @@ set(COMPONENT_SRCS  "src/common/protocomm.c"
 set(COMPONENT_PRIV_REQUIRES protobuf-c mbedtls console esp_http_server bt)
 
 if(CONFIG_BT_ENABLED)
-    if(CONFIG_BLUEDROID_ENABLED)
+    if(CONFIG_BT_BLUEDROID_ENABLED)
         list(APPEND COMPONENT_SRCS
             "src/simple_ble/simple_ble.c"
             "src/transports/protocomm_ble.c")
+        list(APPEND priv_include_dirs
+            src/simple_ble)
+    endif()
+    if(CONFIG_BT_NIMBLE_ENABLED)
+        list(APPEND srcs
+            "src/transports/protocomm_nimble.c")
     endif()
 endif()
 

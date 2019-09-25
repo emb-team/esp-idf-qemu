@@ -13,9 +13,9 @@ SECTIONS
     *rtc_wake_stub*.*(.literal .text .literal.* .text.*)
     _rtc_text_end = ABSOLUTE(.);
   } > rtc_iram_seg
-  
+
   /*
-    This section is required to skip rtc.text area because rtc_iram_seg and 
+    This section is required to skip rtc.text area because rtc_iram_seg and
     rtc_data_seg are reflect the same address space on different buses.
   */
   .rtc.dummy :
@@ -26,8 +26,8 @@ SECTIONS
     _rtc_dummy_end = ABSOLUTE(.);
   } > rtc_data_seg
 
-  /* This section located in RTC FAST Memory area. 
-     It holds data marked with RTC_FAST_ATTR attribute. 
+  /* This section located in RTC FAST Memory area.
+     It holds data marked with RTC_FAST_ATTR attribute.
      See the file "esp_attr.h" for more information.
   */
   .rtc.force_fast :
@@ -43,7 +43,7 @@ SECTIONS
      data/rodata, including from any source file
      named rtc_wake_stub*.c and the data marked with
      RTC_DATA_ATTR, RTC_RODATA_ATTR attributes.
-     The memory location of the data is dependent on 
+     The memory location of the data is dependent on
      CONFIG_ESP32_RTCDATA_IN_FAST_MEM option.
   */
   .rtc.data :
@@ -65,11 +65,11 @@ SECTIONS
     _rtc_bss_end = ABSOLUTE(.);
   } > rtc_data_location
 
-  /* This section holds data that should not be initialized at power up 
+  /* This section holds data that should not be initialized at power up
      and will be retained during deep sleep.
      User data marked with RTC_NOINIT_ATTR will be placed
-     into this section. See the file "esp_attr.h" for more information. 
-	 The memory location of the data is dependent on 
+     into this section. See the file "esp_attr.h" for more information.
+	 The memory location of the data is dependent on
      CONFIG_ESP32_RTCDATA_IN_FAST_MEM option.
   */
   .rtc_noinit (NOLOAD):
@@ -81,8 +81,8 @@ SECTIONS
     _rtc_noinit_end = ABSOLUTE(.);
   } > rtc_data_location
 
-  /* This section located in RTC SLOW Memory area. 
-     It holds data marked with RTC_SLOW_ATTR attribute. 
+  /* This section located in RTC SLOW Memory area.
+     It holds data marked with RTC_SLOW_ATTR attribute.
      See the file "esp_attr.h" for more information.
   */
   .rtc.force_slow :
@@ -95,17 +95,17 @@ SECTIONS
   } > rtc_slow_seg
 
   /* Get size of rtc slow data based on rtc_data_location alias */
-  _rtc_slow_length = (ORIGIN(rtc_slow_seg) == ORIGIN(rtc_data_location)) 
-                        ? (_rtc_force_slow_end - _rtc_data_start) 
+  _rtc_slow_length = (ORIGIN(rtc_slow_seg) == ORIGIN(rtc_data_location))
+                        ? (_rtc_force_slow_end - _rtc_data_start)
                         : (_rtc_force_slow_end - _rtc_force_slow_start);
 
-  _rtc_fast_length = (ORIGIN(rtc_slow_seg) == ORIGIN(rtc_data_location)) 
-                        ? (_rtc_force_fast_end - _rtc_fast_start) 
+  _rtc_fast_length = (ORIGIN(rtc_slow_seg) == ORIGIN(rtc_data_location))
+                        ? (_rtc_force_fast_end - _rtc_fast_start)
                         : (_rtc_noinit_end - _rtc_fast_start);
-  
+
   ASSERT((_rtc_slow_length <= LENGTH(rtc_slow_seg)),
           "RTC_SLOW segment data does not fit.")
-          
+
   ASSERT((_rtc_fast_length <= LENGTH(rtc_data_seg)),
           "RTC_FAST segment data does not fit.")
 
@@ -188,6 +188,10 @@ SECTIONS
     *libbtdm_app.a:(.data .data.*)
     . = ALIGN (4);
     _btdm_data_end = ABSOLUTE(.);
+    _nimble_data_start = ABSOLUTE(.);
+    *libnimble.a:(.data .data.*)
+    . = ALIGN (4);
+    _nimble_data_end = ABSOLUTE(.);
     *(.data)
     *(.data.*)
     *(.gnu.linkonce.d.*)
@@ -221,7 +225,7 @@ SECTIONS
   {
     . = ALIGN(4);
     _noinit_start = ABSOLUTE(.);
-    *(.noinit .noinit.*) 
+    *(.noinit .noinit.*)
     . = ALIGN(4) ;
     _noinit_end = ABSOLUTE(.);
   } > dram0_0_seg
@@ -240,6 +244,10 @@ SECTIONS
     *libbtdm_app.a:(.bss .bss.* COMMON)
     . = ALIGN (4);
     _btdm_bss_end = ABSOLUTE(.);
+    _nimble_bss_start = ABSOLUTE(.);
+    *libnimble.a:(.bss .bss.* COMMON)
+    . = ALIGN (4);
+    _nimble_bss_end = ABSOLUTE(.);
     *(.dynsbss)
     *(.sbss)
     *(.sbss.*)
@@ -262,7 +270,7 @@ SECTIONS
 
   ASSERT(((_bss_end - ORIGIN(dram0_0_seg)) <= LENGTH(dram0_0_seg)),
           "DRAM segment data does not fit.")
-          
+
   .flash.rodata :
   {
     _rodata_start = ABSOLUTE(.);
