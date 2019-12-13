@@ -60,8 +60,8 @@
 
 [submodule "components/mqtt/esp-mqtt"]
 	path = components/mqtt/esp-mqtt
-	url = https://bitbucket.cloud.grohe.com/scm/~evgenii.zharkov/esp-mqtt.git
+	url = https://bitbucket.cloud.grohe.com/scm/~e.zharkov_reply.de/esp-mqtt.git
 
 [submodule "components/bt/host/nimble/nimble"]
 	path = components/bt/host/nimble/nimble
-	url = https://bitbucket.cloud.grohe.com/scm/~evgenii.zharkov/esp-nimble.git
+	url = https://bitbucket.cloud.grohe.com/scm/~e.zharkov_reply.de/esp-nimble.git
