@@ -376,6 +376,11 @@ esp_err_t httpd_resp_send_chunk(httpd_req_t *r, const char *buf, ssize_t buf_len
     return ESP_OK;
 }
 
+esp_err_t httpd_resp_send_400(httpd_req_t *r)
+{
+    return httpd_resp_send_err(r, HTTPD_400_BAD_REQUEST);
+}
+
 esp_err_t httpd_resp_send_404(httpd_req_t *r)
 {
     return httpd_resp_send_err(r, HTTPD_404_NOT_FOUND);
