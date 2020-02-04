@@ -52,7 +52,7 @@
 
 [submodule "components/lwip/lwip"]
 	path = components/lwip/lwip
-	url = https://github.com/espressif/esp-lwip.git
+	url = https://bitbucket.cloud.grohe.com/scm/~e.zharkov_reply.de/esp-lwip.git
 
 [submodule "components/protobuf-c/protobuf-c"]
 	path = components/protobuf-c/protobuf-c
