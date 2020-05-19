@@ -70,6 +70,8 @@ static sys_sem_t api_lock_sem = NULL;
 extern sys_thread_t g_lwip_task;
 static const char* TAG = "tcpip_adapter";
 
+int is_running_qemu();
+
 static void tcpip_adapter_api_cb(void* api_msg)
 {
     tcpip_adapter_api_msg_t *msg = (tcpip_adapter_api_msg_t*)api_msg;
@@ -132,6 +134,9 @@ static inline netif_init_fn tcpip_if_to_netif_init_fn(tcpip_adapter_if_t tcpip_i
 
 static int tcpip_adapter_ipc_check(tcpip_adapter_api_msg_t *msg)
 {
+    if (is_running_qemu()) {
+	return TCPIP_ADAPTER_IPC_REMOTE;
+    }
 #if TCPIP_ADAPTER_TRHEAD_SAFE
     xTaskHandle local_task = xTaskGetCurrentTaskHandle();
 
@@ -238,6 +243,10 @@ static esp_err_t tcpip_adapter_start_api(tcpip_adapter_api_msg_t * msg)
 
 esp_err_t tcpip_adapter_stop(tcpip_adapter_if_t tcpip_if)
 {
+    if (is_running_qemu()) {
+	return ESP_OK;
+    }
+
     TCPIP_ADAPTER_IPC_CALL(tcpip_if, 0, 0, 0, tcpip_adapter_stop_api);
 
     if (tcpip_if >= TCPIP_ADAPTER_IF_MAX) {
@@ -986,6 +995,10 @@ static void tcpip_adapter_ip_lost_timer(void *arg)
 
 esp_err_t tcpip_adapter_dhcpc_get_status(tcpip_adapter_if_t tcpip_if, tcpip_adapter_dhcp_status_t *status)
 {
+    if (is_running_qemu()) {
+	*status = TCPIP_ADAPTER_DHCP_STARTED;
+	return ESP_OK;
+    }
     *status = dhcpc_status[tcpip_if];
 
     return ESP_OK;
@@ -1202,9 +1215,11 @@ esp_err_t tcpip_adapter_get_hostname(tcpip_adapter_if_t tcpip_if, const char **h
 
 static esp_err_t tcpip_adapter_reset_ip_info(tcpip_adapter_if_t tcpip_if)
 {
-    ip4_addr_set_zero(&esp_ip[tcpip_if].ip);
-    ip4_addr_set_zero(&esp_ip[tcpip_if].gw);
-    ip4_addr_set_zero(&esp_ip[tcpip_if].netmask);
+    if (!is_running_qemu()) {
+	ip4_addr_set_zero(&esp_ip[tcpip_if].ip);
+	ip4_addr_set_zero(&esp_ip[tcpip_if].gw);
+	ip4_addr_set_zero(&esp_ip[tcpip_if].netmask);
+    }
     return ESP_OK;
 }
 

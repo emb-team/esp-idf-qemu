@@ -570,8 +570,27 @@ static void esp_phy_reduce_tx_power(esp_phy_init_data_t* init_data)
 }
 #endif
 
+int is_running_qemu() {
+    int *quemu_test=(int *)  0x3ff005f0;
+    int ret_val;
+
+    if (*quemu_test==0x42) {
+        printf("Running in qemu\n");
+        ret_val=1;
+    } else {
+      ret_val=0;
+    }
+
+    return ret_val;
+}
+
 void esp_phy_load_cal_and_init(phy_rf_module_t module)
 {
+
+    if (is_running_qemu()) {
+	return;
+    }
+
     esp_phy_calibration_data_t* cal_data =
             (esp_phy_calibration_data_t*) calloc(sizeof(esp_phy_calibration_data_t), 1);
     if (cal_data == NULL) {
