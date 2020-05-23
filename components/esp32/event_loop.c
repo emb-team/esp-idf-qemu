@@ -46,6 +46,8 @@ static esp_err_t esp_event_post_to_user(system_event_t *event)
     return ESP_OK;
 }
 
+int is_running_qemu(void);
+
 static void esp_event_loop_task(void *pvParameters)
 {
     while (1) {
@@ -55,6 +57,14 @@ static void esp_event_loop_task(void *pvParameters)
             if (ret != ESP_OK) {
                 ESP_LOGE(TAG, "default event handler failed!");
             }
+
+            if (is_running_qemu()) {
+                if (evt.event_id >= SYSTEM_EVENT_ETH_START && evt.event_id <= SYSTEM_EVENT_ETH_GOT_IP) {
+                    ESP_LOGE(TAG, "QEMU event skipping!");
+                    continue;
+		}
+	    }
+
             ret = esp_event_post_to_user(&evt);
             if (ret != ESP_OK) {
                 ESP_LOGE(TAG, "post event to user fail!");

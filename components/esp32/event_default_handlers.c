@@ -367,11 +367,11 @@ static esp_err_t esp_system_event_debug(system_event_t *event)
         break;
     }
     case SYSTEM_EVENT_ETH_CONNECTED: {
-        ESP_LOGD(TAG, "SYSTEM_EVENT_ETH_CONNECETED");
+        ESP_LOGD(TAG, "SYSTEM_EVENT_ETH_CONNECTED");
         break;
     }
     case SYSTEM_EVENT_ETH_DISCONNECTED: {
-        ESP_LOGD(TAG, "SYSTEM_EVENT_ETH_DISCONNECETED");
+        ESP_LOGD(TAG, "SYSTEM_EVENT_ETH_DISCONNECTED");
         break;
     }
     case SYSTEM_EVENT_ETH_GOT_IP: {
@@ -388,6 +388,9 @@ static esp_err_t esp_system_event_debug(system_event_t *event)
     return ESP_OK;
 }
 
+int is_running_qemu(void);
+esp_err_t eth_got_ip_event(system_event_t *event);
+
 esp_err_t esp_event_process_default(system_event_t *event)
 {
     if (event == NULL) {
@@ -396,6 +399,18 @@ esp_err_t esp_event_process_default(system_event_t *event)
     }
 
     esp_system_event_debug(event);
+
+    // No default event handlers calls if qemu
+    if (is_running_qemu()) {
+	if (event->event_id == SYSTEM_EVENT_ETH_GOT_IP) {
+		eth_got_ip_event(event);
+	}
+	// disgard all events for STA and AP. Only ETH events shall be handled by default callbacks
+	if (event->event_id >= SYSTEM_EVENT_STA_START && event->event_id <= SYSTEM_EVENT_GOT_IP6) {
+		return ESP_OK;
+	}
+    }
+
     if ((event->event_id < SYSTEM_EVENT_MAX)) {
         if (default_event_handlers[event->event_id] != NULL) {
             ESP_LOGV(TAG, "enter default callback");

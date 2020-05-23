@@ -62,7 +62,7 @@ esp_err_t esp_wifi_deinit(void) {
 	return ESP_OK;
 }
 
-int g_wifi_mode = 0;
+static int g_wifi_mode = 0;
 /**
   * @brief     Set the WiFi operating mode
   *
@@ -97,48 +97,51 @@ esp_err_t esp_wifi_get_mode(wifi_mode_t *mode) {
 	return ESP_OK;
 }
 
-struct netif ethoc_if;
-extern err_t ethoc_init(struct netif *netif);
+#define WIFI_TASK_STACK_DEPTH	(4 * 1024)
+#define WIFI_TASK_PRIORITY	5
 
-static EventGroupHandle_t g_wifi_evt;
-int eth_initialized = 0;
-int wifi_initialized = 0;
-ip4_addr_t ipaddr, netmask, gw, dnsserver;
+#define ETH_INIT_DONE		BIT0
+#define WIFI_AP_INIT_DONE	BIT1
+#define WIFI_STA_INIT_DONE	BIT2
+#define WIFI_STA_STOP_DONE	BIT3
 
-void network_runner(void *arg);
+
+//struct netif ethoc_if;
+//extern err_t ethoc_init(struct netif *netif);
+
+static EventGroupHandle_t g_net_evt;
+static int eth_initialized = 0;
+static int wifi_initialized = 0;
+//ip4_addr_t ipaddr, netmask, gw, dnsserver;
+
+static void network_runner(void *arg);
+
+void esp_event_set_default_eth_handlers(void);
 
 void initialize_ethernet(void)
 {
-
 	if (eth_initialized) {
 		return;
 	}
 
-	IP4_ADDR(&gw, 192,168,0,1);
-	IP4_ADDR(&ipaddr, 192,168,0,3);
-	IP4_ADDR(&netmask, 255,255,255,0);
-
-	IP4_ADDR(&dnsserver, 8,8,8,8);
-	dns_setserver(0, (const ip_addr_t *)&dnsserver);
-	IP4_ADDR(&dnsserver, 8,8,4,4);
-
-	dns_setserver(1, (const ip_addr_t *)&dnsserver);
-
 	tcpip_adapter_init();
+	esp_event_set_default_eth_handlers();
 
-	netif_add(&ethoc_if, &ipaddr, &netmask, &gw, NULL, ethoc_init, tcpip_input);
-	netif_set_default(&ethoc_if);
-	netif_set_up(&ethoc_if);
-
-	eth_initialized = 1;
+	xEventGroupSetBits(g_net_evt, ETH_INIT_DONE);
 }
 
-#define WIFI_TASK_STACK_DEPTH	(4 * 1024)
-#define WIFI_TASK_PRIORITY	5
+esp_err_t eth_got_ip_event(system_event_t *event)
+{
+	if (g_wifi_mode == WIFI_MODE_APSTA) {
+		xEventGroupSetBits(g_net_evt, WIFI_AP_INIT_DONE);
+	} else {
+		xEventGroupSetBits(g_net_evt, WIFI_STA_INIT_DONE);
+	}
 
-#define WIFI_AP_INIT_DONE	BIT0
-#define WIFI_STA_INIT_DONE	BIT1
-#define WIFI_STA_STOP_DONE	BIT2
+	eth_initialized++;
+
+	return ESP_OK;
+}
 
 esp_err_t esp_wifi_start(void)
 { 
@@ -148,19 +151,15 @@ esp_err_t esp_wifi_start(void)
 		return ESP_OK;
 	}
 
+	g_net_evt = xEventGroupCreate();
+
 	initialize_ethernet();
 	
-	g_wifi_evt = xEventGroupCreate();
-
 	ret = xTaskCreate(network_runner, "network_runner", WIFI_TASK_STACK_DEPTH,
 	    NULL, WIFI_TASK_PRIORITY, NULL);
 	if (ret != pdPASS)  {
 		ESP_LOGE("WIFI", "Failed to create thread wifi_runner.");
 		return ESP_FAIL;
-	}
-
-	if (g_wifi_mode == WIFI_MODE_APSTA) {
-		xEventGroupSetBits(g_wifi_evt, WIFI_AP_INIT_DONE);
 	}
 
 	wifi_initialized++;
@@ -180,7 +179,7 @@ esp_err_t esp_wifi_start(void)
   */
 esp_err_t esp_wifi_stop(void) { 
 
-	xEventGroupSetBits(g_wifi_evt, WIFI_STA_STOP_DONE);
+	xEventGroupSetBits(g_net_evt, WIFI_STA_STOP_DONE);
 	
 	return ESP_OK;
 }
@@ -225,8 +224,9 @@ esp_err_t esp_wifi_connect(void)
 { 
 
 	// Called connect to STA
-	xEventGroupSetBits(g_wifi_evt, WIFI_STA_INIT_DONE);
-
+	if (eth_initialized) {
+		xEventGroupSetBits(g_net_evt, WIFI_STA_INIT_DONE);
+	}
 	return ESP_OK;
 }
 
@@ -365,9 +365,20 @@ void network_runner(void *arg)
 	while ( 1 )
 	{
 		EventBits_t uxBits;
-		uxBits = xEventGroupWaitBits(g_wifi_evt, WIFI_AP_INIT_DONE | WIFI_STA_INIT_DONE | WIFI_STA_STOP_DONE,
+		uxBits = xEventGroupWaitBits(g_net_evt, ETH_INIT_DONE | WIFI_AP_INIT_DONE | WIFI_STA_INIT_DONE | WIFI_STA_STOP_DONE,
 		    true, false, timeout);
-		if (uxBits & WIFI_AP_INIT_DONE) {
+		if (uxBits & ETH_INIT_DONE) {
+			// it will call tcpip_adapter_eth_start(mac, ip_info)
+			memset(&evt, 0x0, sizeof(evt));
+			evt.event_id = SYSTEM_EVENT_ETH_START;
+			esp_event_send(&evt); // notify event loop
+
+			// trigger connect event to launch DHCP client
+			memset(&evt, 0x0, sizeof(evt));
+			evt.event_id = SYSTEM_EVENT_ETH_CONNECTED;
+			esp_event_send(&evt); // notify event loop
+		}
+		else if (uxBits & WIFI_AP_INIT_DONE) {
 			uint8_t mac_addr[6] = { 0xa, 0xb, 0xc, 0x0, 0x0, 0x0 };
 
 			memset(&evt, 0x0, sizeof(evt));
@@ -378,16 +389,18 @@ void network_runner(void *arg)
 			esp_event_send(&evt); // notify event loop		
 		}
 		else if (uxBits & WIFI_STA_INIT_DONE) {
-
 			memset(&evt, 0x0, sizeof(evt));
 			evt.event_id = SYSTEM_EVENT_STA_CONNECTED;
 			esp_event_send(&evt); // notify event loop
 
+			tcpip_adapter_ip_info_t eth_ip;
+			tcpip_adapter_get_ip_info(TCPIP_ADAPTER_IF_ETH, &eth_ip);
+
 			memset(&evt, 0x0, sizeof(evt));
 			evt.event_id = SYSTEM_EVENT_STA_GOT_IP;
-			memcpy(&evt.event_info.got_ip.ip_info.ip, &ipaddr, sizeof(ipaddr));
-			memcpy(&evt.event_info.got_ip.ip_info.netmask, &netmask, sizeof(netmask));
-			memcpy(&evt.event_info.got_ip.ip_info.gw, &gw, sizeof(gw));
+			memcpy(&evt.event_info.got_ip.ip_info.ip, &eth_ip.ip, sizeof(eth_ip.ip));
+			memcpy(&evt.event_info.got_ip.ip_info.netmask, &eth_ip.netmask, sizeof(eth_ip.netmask));
+			memcpy(&evt.event_info.got_ip.ip_info.gw, &eth_ip.gw, sizeof(eth_ip.gw));
 
 			esp_event_send(&evt); // notify event loop
 		} else if (uxBits & WIFI_STA_STOP_DONE) {
